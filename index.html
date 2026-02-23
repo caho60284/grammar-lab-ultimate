@@ -1,55 +1,86 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grammar Lab</title>
 
 <style>
-*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
-body{margin:0;background:#f4f8f6}
-header{background:#fff;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-h1{margin:0;color:#1f7a5c}
-.sub{font-size:13px;color:#6b7280}
+body{
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+background:#f4f6f5;
+margin:0;
+padding:20px;
+color:#1f2d2a;
+}
 
-.container{padding:16px;max-width:900px;margin:auto}
+h1{
+color:#2f6f5e;
+margin-bottom:5px;
+}
+
+.subtitle{
+color:#6b7c76;
+margin-bottom:20px;
+}
 
 textarea{
 width:100%;
-min-height:110px;
-padding:12px;
-border-radius:12px;
-border:1px solid #ddd;
-font-size:16px;
+min-height:120px;
+border-radius:14px;
+border:1px solid #d7dfdb;
+padding:14px;
+font-size:18px;
+outline:none;
+box-sizing:border-box;
+background:white;
 }
 
 button{
-margin-top:10px;
-background:#1f7a5c;
-color:#fff;
+margin-top:14px;
+background:#2f6f5e;
+color:white;
 border:none;
-border-radius:10px;
-padding:10px 14px;
-font-size:15px;
+padding:12px 20px;
+border-radius:12px;
+font-size:16px;
 cursor:pointer;
 }
 
 .card{
-background:#fff;
-border-radius:14px;
-padding:14px;
-margin-top:14px;
-box-shadow:0 2px 6px rgba(0,0,0,.05);
+background:white;
+border-radius:16px;
+padding:16px;
+margin-top:16px;
+box-shadow:0 2px 6px rgba(0,0,0,0.05);
 }
 
-.title{font-weight:700;color:#1f7a5c;margin-bottom:6px}
-.issue{color:#c0392b;margin:3px 0}
-.good{color:#1f7a5c}
-.suggestion{
-background:#ecfdf5;
+.card h3{
+margin-top:0;
+color:#2f6f5e;
+}
+
+.ok{
+color:#2f8f5e;
+font-weight:600;
+}
+
+.err{
+color:#c0392b;
+font-weight:600;
+}
+
+.rewrite{
+background:#e6f2ee;
 padding:10px;
 border-radius:10px;
-margin-top:6px;
+font-style:italic;
+}
+
+.meaning{
+background:#e6f2ee;
+padding:10px;
+border-radius:10px;
 font-style:italic;
 }
 </style>
@@ -57,14 +88,11 @@ font-style:italic;
 
 <body>
 
-<header>
 <h1>🧠 Grammar Lab</h1>
-<div class="sub">Grammar analyzer + rewrite + meaning</div>
-</header>
+<div class="subtitle">Grammar analyzer + natural rewrite + meaning</div>
 
-<div class="container">
-
-<textarea id="sentence" placeholder="Ketik atau tempel kalimat Inggris..."></textarea>
+<textarea id="input" placeholder="Type sentence..."></textarea>
+<br>
 <button onclick="analyze()">Analisis</button>
 
 <div id="syntax" class="card" style="display:none"></div>
@@ -72,139 +100,185 @@ font-style:italic;
 <div id="rewrite" class="card" style="display:none"></div>
 <div id="meaning" class="card" style="display:none"></div>
 
-</div>
-
 <script>
 
-// ===== UTIL =====
-function cap(s){
-return s.charAt(0).toUpperCase()+s.slice(1)
-}
+const input = document.getElementById("input")
+const syntaxBox = document.getElementById("syntax")
+const issuesBox = document.getElementById("issues")
+const rewriteBox = document.getElementById("rewrite")
+const meaningBox = document.getElementById("meaning")
 
-// ===== TRANSLATE =====
-async function translateToIndo(text){
-try{
-let r=await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q="+encodeURIComponent(text))
-let j=await r.json()
-return j[0].map(x=>x[0]).join("")
-}catch{return ""}
-}
-
-// ===== ANALYZE =====
-function analyze(){
-
-let text=document.getElementById("sentence").value.trim()
-if(!text) return
-
-let lower=text.toLowerCase()
-let issues=[]
-let sug=text
-
-function add(msg){issues.push(msg)}
-
-// ===== SUBJECT / VERB =====
-let tokens=lower.replace(/[.,!?]/g,"").split(/\s+/)
-let subject=tokens[0]||""
-let verb=tokens[1]||""
-
-// ===== SYNTAX =====
-let syntaxBox=document.getElementById("syntax")
-syntaxBox.innerHTML="<div class='title'>Syntax</div>"+
-"Subject: "+subject+"<br>Main verb: "+verb
-syntaxBox.style.display="block"
-
-// ===== INFINITIVE VERBS =====
-let infinitive=["want","need","plan","decide","try","hope","learn","refuse"]
-infinitive.forEach(v=>{
-let nounAfter=new RegExp("\\b"+v+"\\s+(something|someone|anything|nothing|a|an|the)\\b")
-let wrong=new RegExp("\\b"+v+"\\s+[a-z]+\\b")
-if(wrong.test(lower)&&!new RegExp("\\b"+v+"\\s+to\\s+").test(lower)&&!nounAfter.test(lower)){
-add('Verb complement: "'+v+'" harus diikuti to + verb')
-sug=sug.replace(new RegExp(v+"\\s+([a-z]+)","i"),v+" to $1")
-}
-})
-
-// ===== SOMETHING TO VERB =====
-if(/\b(something|anything|nothing|someone)\s+[a-z]+\b/.test(lower) &&
-!/\b(something|anything|nothing|someone)\s+to\s+[a-z]+\b/.test(lower)){
-add('Setelah something/someone perlu "to + verb"')
-sug=sug.replace(/\b(something|anything|nothing|someone)\s+([a-z]+)/i,"$1 to $2")
-}
-
-// ===== MODAL + ING =====
-let modals=["will","can","must","should","may","might","could","would"]
-modals.forEach(m=>{
-if(new RegExp("\\b"+m+"\\s+[a-z]+ing\\b").test(lower)){
-add("Modal harus diikuti base verb")
-sug=sug.replace(new RegExp(m+"\\s+([a-z]+)ing","i"),m+" $1")
-}
-})
-
-// ===== FEEL + ING =====
-if(/\bfeel\s+[a-z]+ing\b/.test(lower)&&!/\bfeel\s+like\s+[a-z]+ing\b/.test(lower)){
-add('Verb complement: feel harus "like + ing"')
-sug=sug.replace(/\bfeel\s+([a-z]+ing)/i,"feel like $1")
-}
-
-// ===== FALL + ING =====
-if(/\bfell\s+[a-z]+ing\b/.test(lower)&&!/\bfell\s+(while|and)\s+[a-z]+ing\b/.test(lower)){
-add('Setelah "fell" biasanya perlu while/and sebelum -ing')
-sug=sug.replace(/\bfell\s+([a-z]+ing)/i,"fell while $1")
-}
-
-// ===== ANYTHING POLARITY =====
-if(/\banything\b/.test(lower)&&!/\bnot|never|n't\b/.test(lower)){
-add("Gunakan something dalam kalimat positif")
-sug=sug.replace(/anything/i,"something")
-}
-
-// ===== NEED SOMETHING TO EAT =====
-if(/\bneed\s+(something|anything|nothing|someone)\s+[a-z]+\b/.test(lower)&&
-!/\bneed\s+(something|anything|nothing|someone)\s+to\s+[a-z]+\b/.test(lower)){
-add("Setelah need + something perlu to")
-sug=sug.replace(/\bneed\s+(something|anything|nothing|someone)\s+([a-z]+)/i,"need $1 to $2")
-}
-
-// ===== ISSUES =====
-let issueBox=document.getElementById("issues")
-if(issues.length){
-issueBox.innerHTML="<div class='title'>Issues</div>"+issues.map(x=>"❌ "+x).join("<br>")
-}else{
-issueBox.innerHTML="<div class='title'>Issues</div><div class='good'>✔ Tidak ada masalah utama</div>"
-}
-issueBox.style.display="block"
-
-// ===== REWRITE + MEANING =====
-let rewriteBox=document.getElementById("rewrite")
-let meaningBox=document.getElementById("meaning")
-
-let finalSentence=(sug!==text)?sug:text
-finalSentence=cap(finalSentence)
-if(!/[.!?]$/.test(finalSentence)) finalSentence+="."
-
-if(sug!==text){
-rewriteBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+finalSentence+"</div>"
-rewriteBox.style.display="block"
-}else{
-rewriteBox.style.display="none"
-}
-
-translateToIndo(finalSentence).then(m=>{
-if(m){
-meaningBox.innerHTML="<div class='title'>Meaning</div><div class='suggestion'>"+m+"</div>"
-meaningBox.style.display="block"
-}
-})
-
-}
-
-// ===== ENTER = ANALYZE =====
-document.getElementById("sentence").addEventListener("keydown",function(e){
-if(e.key==="Enter"&&!e.shiftKey){
+// ENTER = ANALYZE
+input.addEventListener("keydown", e=>{
+if(e.key==="Enter" && !e.shiftKey){
 e.preventDefault()
 analyze()
 }
 })
+
+// =========================
+// NATURAL RULES
+// =========================
+const naturalRules = [
+{
+pattern:/\bfeel\s+\w+ing\b/i,
+message:"Gunakan feel like + -ing",
+fix:s=>s.replace(/feel\s+(\w+ing)/i,"feel like $1")
+},
+{
+pattern:/\bdiscuss about\b/i,
+message:"discuss tidak pakai about",
+fix:s=>s.replace(/discuss about/i,"discuss")
+},
+{
+pattern:/\bdo a mistake\b/i,
+message:"Gunakan make a mistake",
+fix:s=>s.replace(/do a mistake/i,"make a mistake")
+},
+{
+pattern:/\bvery hungry\b/i,
+message:"Lebih natural: really hungry",
+fix:s=>s.replace(/very hungry/i,"really hungry")
+},
+{
+pattern:/\beat medicine\b/i,
+message:"Lebih natural: take medicine",
+fix:s=>s.replace(/eat medicine/i,"take medicine")
+}
+]
+
+// =========================
+// GRAMMAR RULES
+// =========================
+function grammarCheck(s){
+let issues=[]
+let rewrite=s
+
+// need + to
+if(/\bneed\s+\w+\s+eat\b/i.test(s)){
+issues.push('Verb complement: need + something to eat')
+rewrite="I need something to eat"
+}
+
+// modal + ing
+if(/\b(will|can|must|should)\s+\w+ing\b/i.test(s)){
+issues.push("Modal harus diikuti base verb")
+rewrite=s.replace(/\b(will|can|must|should)\s+(\w+)ing\b/i,"$1 $2")
+}
+
+// feel crying
+if(/\bfeel\s+crying\b/i.test(s)){
+issues.push("feel harus like + ing")
+rewrite=s.replace(/feel\s+crying/i,"feel like crying")
+}
+
+// fall crying
+if(/\bfell\s+crying\b/i.test(s)){
+issues.push("fell biasanya while + ing")
+rewrite=s.replace(/fell\s+crying/i,"fell while crying")
+}
+
+return {issues,rewrite}
+}
+
+// =========================
+// NATURAL CHECK
+// =========================
+function naturalCheck(s){
+for(const r of naturalRules){
+if(r.pattern.test(s)){
+return {
+issue:r.message,
+rewrite:r.fix(s)
+}
+}
+}
+return null
+}
+
+// =========================
+// MEANING
+// =========================
+function translate(s){
+
+// simple dictionary
+if(/need something to eat/i.test(s))
+return "Aku butuh sesuatu untuk dimakan."
+
+if(/feel like crying/i.test(s))
+return "Aku merasa ingin menangis."
+
+if(/fell while crying/i.test(s))
+return "Aku terjatuh sambil menangis."
+
+if(/really hungry/i.test(s))
+return "Aku sangat lapar."
+
+// fallback
+return "Terjemahan otomatis belum tersedia."
+}
+
+// =========================
+// ANALYZE
+// =========================
+function analyze(){
+
+let text = input.value.trim()
+if(!text) return
+
+// reset
+syntaxBox.style.display="block"
+issuesBox.style.display="block"
+rewriteBox.style.display="block"
+meaningBox.style.display="block"
+
+let grammar = grammarCheck(text)
+let nat = naturalCheck(text)
+
+let finalRewrite = text
+let issues=[]
+
+// grammar issues
+if(grammar.issues.length){
+issues.push(...grammar.issues)
+finalRewrite = grammar.rewrite
+}
+
+// natural issues
+if(nat){
+issues.push("Kurang natural: "+nat.issue)
+finalRewrite = nat.rewrite
+}
+
+// syntax
+let subject = text.split(" ")[0]
+let verb = text.split(" ")[1] || ""
+
+syntaxBox.innerHTML = `
+<h3>Syntax</h3>
+Subject: ${subject}<br>
+Main verb: ${verb}
+`
+
+// issues
+if(issues.length){
+issuesBox.innerHTML = `<h3>Issues</h3><div class="err">❌ ${issues.join("<br>❌ ")}</div>`
+}else{
+issuesBox.innerHTML = `<h3>Issues</h3><div class="ok">✔ Tidak ada masalah utama</div>`
+}
+
+// rewrite
+rewriteBox.innerHTML = `
+<h3>Rewrite</h3>
+<div class="rewrite">${finalRewrite}</div>
+`
+
+// meaning
+meaningBox.innerHTML = `
+<h3>Meaning</h3>
+<div class="meaning">${translate(finalRewrite)}</div>
+`
+}
 
 </script>
 </body>
