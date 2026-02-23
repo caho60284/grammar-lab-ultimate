@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>English Grammar Structure Analyzer</title>
 
 <style>
-
 body{
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:#f4f6f8;
@@ -39,7 +38,7 @@ background:white;
 
 button{
 margin-top:14px;
-padding:14px 20px;
+padding:14px;
 border:none;
 border-radius:14px;
 background:#2f6f5e;
@@ -76,33 +75,22 @@ border-bottom:1px solid #edf1f4;
 font-size:15px;
 vertical-align:top;
 }
-
-@media (max-width:600px){
-
-h1{font-size:22px;}
-textarea{font-size:17px;padding:14px;}
-button{font-size:17px;padding:13px;}
-th,td{font-size:14px;padding:10px;}
-
-}
-
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
 <h1>English Grammar Structure Analyzer</h1>
 
-<textarea id="input" placeholder="Ketik kalimat Inggris di sini..."></textarea>
+<textarea id="input" placeholder="Tulis kalimat Inggris..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>Bagian Kalimat</th>
+<th>Bagian</th>
 <th>Peran</th>
 <th>Jenis</th>
 <th>Penjelasan</th>
@@ -116,133 +104,114 @@ th,td{font-size:14px;padding:10px;}
 
 <script>
 
-const prepositions = [
-"in","on","at","in front of","behind","under","over","between",
-"inside","outside","near","with","without","for","from","to",
-"into","onto","about","around","through","across","after",
-"before","during","because of"
-]
-
-const modals = [
-"can","could","will","would","shall","should","may","might","must"
-]
-
-const beVerbs = [
-"am","is","are","was","were","be","been","being"
-]
-
 function analyze(){
 
-const text = document.getElementById("input").value.trim()
-const out = document.getElementById("out")
-
+const text=document.getElementById("input").value.trim()
+const out=document.getElementById("out")
 out.innerHTML=""
 
-if(!text) return
+if(!text)return
 
-const words = text.split(/\s+/)
+const words=text
+.replace(/’/g,"'")
+.replace(/I'm/gi,"I am")
+.split(/\s+/)
 
-let subject = ""
-let verb = ""
-let modal = ""
-let prepPhrase = ""
-let adjective = ""
-let adverb = ""
+const modals=["can","could","will","would","shall","should","may","might","must"]
+const preps=["in","on","at","to","for","with","from","of","about","by","after","before","under","over"]
+const be=["am","is","are","was","were","be","been","being"]
 
+let subject=null
+let verb=null
+let complement=null
+let object=null
+let pp=[]
+let clause=[]
+let modal=null
+
+// SUBJECT = first pronoun or noun
+const pronouns=["i","you","he","she","we","they","it"]
+for(let w of words){
+if(pronouns.includes(w.toLowerCase())){
+subject=w
+break
+}
+}
+
+// VERB utama = first be or verb setelah subject
+let subjIndex=words.indexOf(subject)
+for(let i=subjIndex+1;i<words.length;i++){
+let w=words[i].toLowerCase()
+if(be.includes(w)||modals.includes(w)){
+verb=words[i]
+break
+}
+}
+
+// MODAL
+for(let w of words){
+if(modals.includes(w.toLowerCase())){
+modal=w
+break
+}
+}
+
+// PREPOSITIONAL PHRASE
 for(let i=0;i<words.length;i++){
-
-let w = words[i].toLowerCase()
-
-if(!modal && modals.includes(w)){
-modal = words[i]
-continue
+if(preps.includes(words[i].toLowerCase())){
+pp.push(words.slice(i).join(" "))
+break
+}
 }
 
-if(!verb && (beVerbs.includes(w) || w.endsWith("ed") || w.endsWith("ing"))){
-verb = words[i]
-continue
+// COMPLEMENT = adjective setelah be
+if(verb && be.includes(verb.toLowerCase())){
+let idx=words.indexOf(verb)
+if(words[idx+1]){
+complement=words.slice(idx+1).join(" ")
+}
 }
 
-if(!prepPhrase){
-for(let p of prepositions){
-if(text.toLowerCase().includes(p+" ")){
-let idx = text.toLowerCase().indexOf(p+" ")
-prepPhrase = text.substring(idx)
+// SUBORDINATE CLAUSE = modal after adjective/complement
+if(complement){
+let compWords=complement.split(" ")
+for(let i=0;i<compWords.length;i++){
+if(modals.includes(compWords[i].toLowerCase())){
+clause=compWords.slice(i).join(" ")
+complement=compWords.slice(0,i).join(" ")
 break
 }
 }
 }
 
-if(!adverb && w.endsWith("ly")){
-adverb = words[i]
-}
-
-if(!adjective && i>0 && beVerbs.includes(words[i-1].toLowerCase())){
-adjective = words[i]
-}
-
-}
-
-if(!verb){
-verb = words.find(w=>w.endsWith("s")||w.endsWith("ed")||w.endsWith("ing")) || ""
-}
-
-if(!subject){
-let idxVerb = words.indexOf(verb)
-if(idxVerb>0){
-subject = words.slice(0,idxVerb).join(" ")
-}else{
-subject = words[0]
+// OBJECT = noun after main verb (non be)
+if(verb && !be.includes(verb.toLowerCase())){
+let idx=words.indexOf(verb)
+if(words[idx+1]){
+object=words.slice(idx+1).join(" ")
 }
 }
 
-function row(seg,type,sub,exp){
-if(!seg) return
-out.innerHTML += `
-<tr>
-<td>${seg}</td>
+// OUTPUT
+function row(seg,role,type,exp){
+out.innerHTML+=`<tr>
+<td>${seg||"-"}</td>
+<td>${role}</td>
 <td>${type}</td>
-<td>${sub}</td>
 <td>${exp}</td>
 </tr>`
 }
 
-row(subject,"Subject","Frasa benda",
-"Bagian yang menjadi pelaku atau topik utama kalimat. Bisa berupa kata benda tunggal atau frasa panjang.")
-
-if(modal){
-row(modal,"Kata kerja bantu","Modal",
-"Kata kerja bantu yang menyatakan kemampuan, kemungkinan, izin, atau kewajiban.")
-}
-
-row(verb,"Predikat","Kata kerja utama",
-"Kata kerja utama yang menyatakan tindakan, keadaan, atau peristiwa.")
-
-if(adjective){
-row(adjective,"Pelengkap","Adjective",
-"Kata sifat yang menjelaskan subjek, biasanya muncul setelah kata kerja 'be'.")
-}
-
-if(adverb){
-row(adverb,"Keterangan","Adverb",
-"Kata keterangan yang menjelaskan cara, tingkat, atau keadaan tindakan.")
-}
-
-if(prepPhrase){
-row(prepPhrase,"Keterangan","Prepositional phrase",
-"Frasa yang diawali preposisi dan menerangkan tempat, waktu, atau hubungan.")
-}
+if(subject)row(subject,"Subjek utama","Kata ganti","Pelaku utama kalimat")
+if(verb)row(verb,"Kata kerja utama","Verb","Predikat utama kalimat")
+if(complement)row(complement,"Pelengkap","Adjective phrase","Menjelaskan subjek")
+if(object)row(object,"Objek","Noun phrase","Penerima aksi")
+if(modal && clause)row(modal,"Modal dalam klausa","Modal","Menunjukkan kemungkinan/kemampuan")
+if(clause.length)row(clause,"Klausa bawahan","Subordinate clause","Klausa tambahan")
+if(pp.length)row(pp,"Frasa preposisi","Prepositional phrase","Keterangan tempat/waktu")
 
 }
-
-document.getElementById("input").addEventListener("keydown",function(e){
-if(e.key==="Enter" && !e.shiftKey){
-e.preventDefault()
-analyze()
-}
-})
 
 </script>
-
 </body>
 </html>
