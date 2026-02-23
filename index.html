@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>English Grammar Structure Analyzer</title>
 
 <style>
+
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 background:#f4f6f8;
 margin:0;
-padding:20px;
+padding:18px;
 }
 
 .container{
@@ -20,259 +21,228 @@ margin:auto;
 
 h1{
 color:#2f6f5e;
-margin-bottom:6px;
-}
-
-.subtitle{
-color:#6b7c76;
-margin-bottom:18px;
+font-size:26px;
+margin-bottom:14px;
+line-height:1.2;
 }
 
 textarea{
 width:100%;
-padding:14px;
-border-radius:12px;
-border:1px solid #ccd3d8;
+padding:16px;
+border-radius:14px;
+border:1px solid #d6dde2;
 font-size:18px;
 min-height:120px;
+box-sizing:border-box;
+background:white;
 }
 
 button{
 margin-top:14px;
-padding:12px 24px;
+padding:14px 20px;
 border:none;
-border-radius:12px;
+border-radius:14px;
 background:#2f6f5e;
 color:white;
 font-size:18px;
+width:100%;
+}
+
+.table-wrap{
+margin-top:18px;
+background:white;
+border-radius:16px;
+overflow:auto;
+box-shadow:0 3px 10px rgba(0,0,0,0.06);
 }
 
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:20px;
-background:white;
-border-radius:12px;
-overflow:hidden;
-}
-
-th,td{
-padding:10px;
-border-bottom:1px solid #e5e9ec;
-text-align:left;
+min-width:520px;
 }
 
 th{
 background:#eef3f1;
 color:#2f6f5e;
+font-weight:600;
+padding:12px;
+font-size:15px;
 }
+
+td{
+padding:12px;
+border-bottom:1px solid #edf1f4;
+font-size:15px;
+vertical-align:top;
+}
+
+@media (max-width:600px){
+
+h1{font-size:22px;}
+textarea{font-size:17px;padding:14px;}
+button{font-size:17px;padding:13px;}
+th,td{font-size:14px;padding:10px;}
+
+}
+
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
 <h1>English Grammar Structure Analyzer</h1>
-<div class="subtitle">Complete structural identification of sentence elements</div>
 
-<textarea id="input" placeholder="Type sentence..."></textarea>
+<textarea id="input" placeholder="Ketik kalimat Inggris di sini..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
+<div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>Segment</th>
-<th>Type</th>
-<th>Subtype</th>
-<th>Explanation</th>
+<th>Bagian Kalimat</th>
+<th>Peran</th>
+<th>Jenis</th>
+<th>Penjelasan</th>
 </tr>
 </thead>
-<tbody id="result"></tbody>
+<tbody id="out"></tbody>
 </table>
+</div>
 
 </div>
 
 <script>
 
-const pronouns = ["i","you","he","she","it","we","they"];
-const modals = ["will","would","can","could","may","might","must","shall","should"];
-const beForms = ["am","is","are","was","were","be","been","being"];
-const prepositions = ["in","on","at","with","by","for","to","from","of","under","over","into","onto","about","before","after"];
-const adverbTime = ["today","tonight","yesterday","now","tomorrow","later","soon","morning","evening","night","always","often","sometimes","never"];
-const adverbPlace = ["here","there","inside","outside","upstairs","downstairs"];
+const prepositions = [
+"in","on","at","in front of","behind","under","over","between",
+"inside","outside","near","with","without","for","from","to",
+"into","onto","about","around","through","across","after",
+"before","during","because of"
+]
+
+const modals = [
+"can","could","will","would","shall","should","may","might","must"
+]
+
+const beVerbs = [
+"am","is","are","was","were","be","been","being"
+]
 
 function analyze(){
 
-let text = document.getElementById("input").value.trim();
-if(!text) return;
+const text = document.getElementById("input").value.trim()
+const out = document.getElementById("out")
 
-let words = text.split(" ");
-let rows = [];
+out.innerHTML=""
 
-/* SUBJECT */
-if(pronouns.includes(words[0].toLowerCase())){
-rows.push([
-words[0],
-"Subject",
-"Pronoun subject",
-"Personal pronoun acting as the subject of the sentence"
-]);
-}
-else{
-rows.push([
-words[0],
-"Subject",
-"Noun subject",
-"Noun acting as the subject of the sentence"
-]);
-}
+if(!text) return
 
-/* GERUND SUBJECT */
-if(words[0].toLowerCase().endsWith("ing")){
-rows.push([
-words[0],
-"Subject",
-"Gerund phrase",
-"Verb-ing form functioning as a noun subject"
-]);
-}
+const words = text.split(/\s+/)
 
-/* PREPOSITIONAL PHRASES */
+let subject = ""
+let verb = ""
+let modal = ""
+let prepPhrase = ""
+let adjective = ""
+let adverb = ""
+
 for(let i=0;i<words.length;i++){
-if(prepositions.includes(words[i].toLowerCase())){
-let obj = words[i+1] || "";
-rows.push([
-words[i]+" "+obj,
-"Prepositional Phrase",
-"Preposition + object",
-"A phrase beginning with a preposition followed by its object"
-]);
 
-rows.push([
-words[i],
-"Preposition",
-"Preposition type",
-"Word that shows relationship such as place, time, direction, or purpose"
-]);
+let w = words[i].toLowerCase()
 
-if(obj){
-rows.push([
-obj,
-"Object of Preposition",
-"Noun object",
-"Noun that completes the meaning of the preposition"
-]);
+if(!modal && modals.includes(w)){
+modal = words[i]
+continue
+}
+
+if(!verb && (beVerbs.includes(w) || w.endsWith("ed") || w.endsWith("ing"))){
+verb = words[i]
+continue
+}
+
+if(!prepPhrase){
+for(let p of prepositions){
+if(text.toLowerCase().includes(p+" ")){
+let idx = text.toLowerCase().indexOf(p+" ")
+prepPhrase = text.substring(idx)
+break
 }
 }
 }
 
-/* MODALS */
-for(let i=0;i<words.length;i++){
-if(modals.includes(words[i].toLowerCase())){
-rows.push([
-words[i],
-"Verb",
-"Modal verb",
-"Auxiliary verb expressing ability, possibility, permission, or obligation"
-]);
-}
+if(!adverb && w.endsWith("ly")){
+adverb = words[i]
 }
 
-/* BE VERB + ING */
-for(let i=0;i<words.length;i++){
-if(beForms.includes(words[i].toLowerCase()) && words[i+1]?.endsWith("ing")){
-rows.push([
-words[i]+" "+words[i+1],
-"Verb Phrase",
-"Continuous aspect",
-"Be verb followed by verb-ing indicating ongoing action"
-]);
+if(!adjective && i>0 && beVerbs.includes(words[i-1].toLowerCase())){
+adjective = words[i]
 }
-}
-
-/* INFINITIVE */
-for(let i=0;i<words.length;i++){
-if(words[i].toLowerCase()=="to" && words[i+1]){
-rows.push([
-"to "+words[i+1],
-"Infinitive Phrase",
-"To-infinitive",
-"Base verb preceded by 'to' expressing purpose or action"
-]);
-}
-}
-
-/* GERUND PHRASE */
-words.forEach(w=>{
-if(w.toLowerCase().endsWith("ing")){
-rows.push([
-w,
-"Gerund or Present Participle",
-"Verb-ing form",
-"Verb form ending in -ing functioning as noun or part of verb phrase"
-]);
-}
-});
-
-/* ADVERB OF MANNER */
-words.forEach(w=>{
-if(w.toLowerCase().endsWith("ly")){
-rows.push([
-w,
-"Adverb",
-"Adverb of manner",
-"Describes how an action is performed"
-]);
-}
-});
-
-/* ADVERB TIME */
-words.forEach(w=>{
-if(adverbTime.includes(w.toLowerCase())){
-rows.push([
-w,
-"Adverb",
-"Adverb of time",
-"Indicates when the action occurs"
-]);
-}
-});
-
-/* ADVERB PLACE */
-words.forEach(w=>{
-if(adverbPlace.includes(w.toLowerCase())){
-rows.push([
-w,
-"Adverb",
-"Adverb of place",
-"Indicates location of the action"
-]);
-}
-});
-
-/* RENDER */
-let tbody = document.getElementById("result");
-tbody.innerHTML="";
-
-rows.forEach(r=>{
-let tr=document.createElement("tr");
-r.forEach(c=>{
-let td=document.createElement("td");
-td.textContent=c;
-tr.appendChild(td);
-});
-tbody.appendChild(tr);
-});
 
 }
 
-document.getElementById("input").addEventListener("keydown",e=>{
-if(e.key==="Enter"){
-e.preventDefault();
-analyze();
+if(!verb){
+verb = words.find(w=>w.endsWith("s")||w.endsWith("ed")||w.endsWith("ing")) || ""
 }
-});
+
+if(!subject){
+let idxVerb = words.indexOf(verb)
+if(idxVerb>0){
+subject = words.slice(0,idxVerb).join(" ")
+}else{
+subject = words[0]
+}
+}
+
+function row(seg,type,sub,exp){
+if(!seg) return
+out.innerHTML += `
+<tr>
+<td>${seg}</td>
+<td>${type}</td>
+<td>${sub}</td>
+<td>${exp}</td>
+</tr>`
+}
+
+row(subject,"Subject","Frasa benda",
+"Bagian yang menjadi pelaku atau topik utama kalimat. Bisa berupa kata benda tunggal atau frasa panjang.")
+
+if(modal){
+row(modal,"Kata kerja bantu","Modal",
+"Kata kerja bantu yang menyatakan kemampuan, kemungkinan, izin, atau kewajiban.")
+}
+
+row(verb,"Predikat","Kata kerja utama",
+"Kata kerja utama yang menyatakan tindakan, keadaan, atau peristiwa.")
+
+if(adjective){
+row(adjective,"Pelengkap","Adjective",
+"Kata sifat yang menjelaskan subjek, biasanya muncul setelah kata kerja 'be'.")
+}
+
+if(adverb){
+row(adverb,"Keterangan","Adverb",
+"Kata keterangan yang menjelaskan cara, tingkat, atau keadaan tindakan.")
+}
+
+if(prepPhrase){
+row(prepPhrase,"Keterangan","Prepositional phrase",
+"Frasa yang diawali preposisi dan menerangkan tempat, waktu, atau hubungan.")
+}
+
+}
+
+document.getElementById("input").addEventListener("keydown",function(e){
+if(e.key==="Enter" && !e.shiftKey){
+e.preventDefault()
+analyze()
+}
+})
 
 </script>
+
 </body>
 </html>
