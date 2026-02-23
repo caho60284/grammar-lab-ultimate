@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,216 +7,216 @@
 
 <style>
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
-background:#f3f6f4;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:#f4f6f8;
 margin:0;
 padding:20px;
-color:#1f2d2a;
 }
-h1{color:#2f6f5e;margin-bottom:4px;}
-.subtitle{color:#6b7c76;margin-bottom:18px;}
+
+.container{
+max-width:720px;
+margin:auto;
+}
+
+h1{
+color:#2f6f5e;
+margin-bottom:4px;
+}
+
+.subtitle{
+color:#7a8a93;
+margin-bottom:20px;
+}
+
 textarea{
-width:100%;min-height:120px;border-radius:14px;
-border:1px solid #d7dfdb;padding:14px;font-size:18px;
-outline:none;box-sizing:border-box;background:white;
+width:100%;
+padding:14px;
+border-radius:14px;
+border:1px solid #d7dde2;
+font-size:18px;
+min-height:120px;
 }
+
 button{
-margin-top:14px;background:#2f6f5e;color:white;
-border:none;padding:12px 20px;border-radius:12px;
-font-size:16px;cursor:pointer;
+margin-top:14px;
+padding:12px 22px;
+border:none;
+border-radius:14px;
+background:#2f6f5e;
+color:white;
+font-size:18px;
 }
+
 .card{
-background:white;border-radius:16px;padding:16px;
-margin-top:16px;box-shadow:0 2px 6px rgba(0,0,0,0.05);
+background:white;
+padding:18px;
+border-radius:16px;
+margin-top:16px;
+box-shadow:0 2px 6px rgba(0,0,0,.05);
 }
-.card h3{margin-top:0;color:#2f6f5e;}
-.ok{color:#2f8f5e;font-weight:600;}
-.warn{color:#d97706;font-weight:600;}
-.box{background:#e6f2ee;padding:10px;border-radius:10px;font-style:italic;}
+
+.label{
+color:#2f6f5e;
+font-weight:600;
+margin-bottom:6px;
+}
+
+.ok{color:#2f8f55}
+.err{color:#c0392b}
+.warn{color:#d68910}
+
+.rewrite{
+background:#e8f1ed;
+padding:12px;
+border-radius:10px;
+}
+
+.meaning{
+background:#e8f1ed;
+padding:12px;
+border-radius:10px;
+}
 </style>
 </head>
 
 <body>
+<div class="container">
 
 <h1>🧠 Grammar Lab AI</h1>
 <div class="subtitle">Flexible grammar + natural rewrite + meaning</div>
 
 <textarea id="input" placeholder="Type sentence..."></textarea>
-<br>
 <button onclick="analyze()">Analisis</button>
 
-<div id="syntax" class="card" style="display:none"></div>
-<div id="issues" class="card" style="display:none"></div>
-<div id="rewrite" class="card" style="display:none"></div>
-<div id="meaning" class="card" style="display:none"></div>
+<div id="syntax" class="card"></div>
+<div id="issues" class="card"></div>
+<div id="rewrite" class="card"></div>
+<div id="meaning" class="card"></div>
+
+</div>
 
 <script>
 
-const input = document.getElementById("input")
-const syntaxBox = document.getElementById("syntax")
-const issuesBox = document.getElementById("issues")
-const rewriteBox = document.getElementById("rewrite")
-const meaningBox = document.getElementById("meaning")
+const pronouns = ["i","you","we","they","he","she","it"];
+const beForms = ["am","is","are","was","were","be","been","being"];
+const modals = ["will","would","can","could","shall","should","may","might","must"];
+const verbsBase = ["eat","go","take","make","do","say","get","see","know","need","want","feel","be","have"];
 
-// ENTER = ANALYZE
-input.addEventListener("keydown", e=>{
-if(e.key==="Enter" && !e.shiftKey){
-e.preventDefault()
-analyze()
-}
-})
-
-// =======================
-// HEURISTIC REWRITE ENGINE
-// =======================
-function heuristicRewrite(s){
-
-let out = s
-
-// modal + ing → base
-out = out.replace(/\b(will|can|must|should)\s+(\w+)ing\b/i,"$1 $2")
-
-// feel + ing → feel like ing
-out = out.replace(/\bfeel\s+(\w+ing)\b/i,"feel like $1")
-
-// need + verb → need to verb
-out = out.replace(/\bneed\s+(\w+)\b/i,"need to $1")
-
-// very + adj → really + adj
-out = out.replace(/\bvery\s+(\w+)\b/i,"really $1")
-
-// I am → I'm
-out = out.replace(/\bI am\b/,"I'm")
-
-return out
+function isAdjective(word){
+if(word.endsWith("y")) return true;
+if(word.endsWith("ful")) return true;
+if(word.endsWith("ous")) return true;
+if(word.endsWith("ive")) return true;
+if(word.endsWith("able")) return true;
+if(word.endsWith("al")) return true;
+if(word.endsWith("ed")) return true;
+return false;
 }
 
-// =======================
-// ISSUE DETECTOR
-// =======================
-function detectIssues(original,rewritten){
-
-let issues=[]
-
-if(original!==rewritten){
-
-if(/\bvery\s+\w+\b/i.test(original))
-issues.push("Less natural intensifier → use really")
-
-if(/\bfeel\s+\w+ing\b/i.test(original))
-issues.push("Use feel like + -ing")
-
-if(/\bneed\s+\w+\b/i.test(original) && !/\bneed to\b/i.test(original))
-issues.push("need + verb → need to + verb")
-
-if(/\b(will|can|must|should)\s+\w+ing\b/i.test(original))
-issues.push("Modal must use base verb")
-}
-
-return issues
-}
-
-// =======================
-// SYNTAX SIMPLE
-// =======================
-function syntaxDetect(s){
-let w = s.split(" ")
-return {subject:w[0]||"",verb:w[1]||""}
-}
-
-// =======================
-// SCALABLE MEANING ENGINE
-// =======================
-function meaningGuess(s){
-
-// small core lexicon
-const coreAdj = {
-hungry:"lapar",
-thirsty:"haus",
-sleepy:"mengantuk",
-tired:"lelah",
-angry:"marah",
-sad:"sedih",
-happy:"bahagia",
-bored:"bosan",
-scared:"takut",
-excited:"bersemangat"
-}
-
-// I'm really + adj
-let m = s.match(/\bI'm really (\w+)\b/i)
-if(m){
-let adj = m[1].toLowerCase()
-
-// known adjective
-if(coreAdj[adj]) return "Aku sangat " + coreAdj[adj]
-
-// suffix heuristic
-if(adj.endsWith("ed")) return "Aku merasa " + adj
-if(adj.endsWith("ing")) return "Aku sedang " + adj
-if(adj.endsWith("ous")) return "Aku bersifat " + adj
-if(adj.endsWith("ful")) return "Aku penuh " + adj
-
-// fallback
-return "Aku sangat merasa " + adj
-}
-
-// feel like + ing
-let f = s.match(/feel like (\w+)ing/i)
-if(f){
-return "Aku merasa ingin " + f[1] + "ing"
-}
-
-// need to + verb
-let n = s.match(/need to (\w+)/i)
-if(n){
-return "Aku perlu " + n[1]
-}
-
-// generic fallback
-return "Makna umum: " + s
-}
-
-// =======================
-// ANALYZE
-// =======================
 function analyze(){
 
-let text = input.value.trim()
-if(!text) return
+let text = document.getElementById("input").value.trim();
+if(!text) return;
 
-let rewritten = heuristicRewrite(text)
-let issues = detectIssues(text,rewritten)
-let syn = syntaxDetect(text)
-let meaning = meaningGuess(rewritten)
+let words = text.toLowerCase().split(/\s+/);
 
-syntaxBox.style.display="block"
-issuesBox.style.display="block"
-rewriteBox.style.display="block"
-meaningBox.style.display="block"
+let subject = "";
+let mainVerb = "";
+let issues = [];
+let rewrite = text;
+let meaning = "";
 
-syntaxBox.innerHTML = `
-<h3>Syntax</h3>
-Subject: ${syn.subject}<br>
-Main verb: ${syn.verb}
-`
-
-if(issues.length){
-issuesBox.innerHTML = `<h3>Issues</h3><div class="warn">⚠ ${issues.join("<br>⚠ ")}</div>`
-}else{
-issuesBox.innerHTML = `<h3>Issues</h3><div class="ok">✔ Natural & correct</div>`
+if(pronouns.includes(words[0])){
+subject = words[0];
 }
 
-rewriteBox.innerHTML = `
-<h3>Rewrite</h3>
-<div class="box">${rewritten}</div>
-`
-
-meaningBox.innerHTML = `
-<h3>Meaning</h3>
-<div class="box">${meaning}</div>
-`
+if(words.length>1){
+mainVerb = words[1];
 }
+
+let missingBe=false;
+let modalError=false;
+let needInf=false;
+
+/* RULE 1: pronoun + adjective => need BE */
+if(pronouns.includes(words[0]) && words.length==2 && isAdjective(words[1])){
+missingBe=true;
+rewrite = words[0] + " am " + words[1];
+}
+
+/* RULE 2: modal + verb-ing error */
+if(modals.includes(words[1]) && words[2] && words[2].endsWith("ing")){
+modalError=true;
+rewrite = words[0]+" "+words[1]+" "+words[2].replace("ing","");
+}
+
+/* RULE 3: need + verb (no to) */
+if(words[1]=="need" && words[2] && !words[2].startsWith("to")){
+needInf=true;
+rewrite = words[0]+" need to "+words.slice(2).join(" ");
+}
+
+/* RULE 4: be + adjective natural */
+if(pronouns.includes(words[0]) && beForms.includes(words[1]) && words.length==3 && isAdjective(words[2])){
+rewrite = words[0]+" "+words[1]+" "+words[2];
+}
+
+/* ISSUES BUILD */
+let issueText="";
+
+if(missingBe){
+issueText+="<div class='err'>❌ Missing BE before adjective</div>";
+}
+if(modalError){
+issueText+="<div class='err'>❌ Modal must use base verb</div>";
+}
+if(needInf){
+issueText+="<div class='err'>❌ 'need' requires to-infinitive</div>";
+}
+if(!missingBe && !modalError && !needInf){
+issueText="<div class='ok'>✔ Natural & correct</div>";
+}
+
+/* MEANING SIMPLE */
+meaning = translateSimple(rewrite);
+
+/* OUTPUT */
+document.getElementById("syntax").innerHTML=
+"<div class='label'>Syntax</div>"+
+"Subject: "+subject+"<br>Main: "+mainVerb;
+
+document.getElementById("issues").innerHTML=
+"<div class='label'>Issues</div>"+issueText;
+
+document.getElementById("rewrite").innerHTML=
+"<div class='label'>Rewrite</div><div class='rewrite'>"+rewrite+"</div>";
+
+document.getElementById("meaning").innerHTML=
+"<div class='label'>Meaning</div><div class='meaning'>"+meaning+"</div>";
+}
+
+/* VERY SIMPLE TRANSLATOR */
+function translateSimple(s){
+
+s=s.toLowerCase();
+
+if(s.includes("hungry")) return "Aku lapar";
+if(s.includes("thirsty")) return "Aku haus";
+if(s.includes("sleepy")) return "Aku mengantuk";
+if(s.includes("tired")) return "Aku lelah";
+if(s.includes("need")) return "Aku perlu";
+if(s.includes("eat")) return "makan";
+
+return "Makna umum: "+s;
+}
+
+/* ENTER = ANALYZE */
+document.getElementById("input").addEventListener("keydown",function(e){
+if(e.key==="Enter"){
+e.preventDefault();
+analyze();
+}
+});
 
 </script>
 </body>
