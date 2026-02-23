@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grammar Lab AI</title>
+<title>Grammar Lab</title>
 
 <style>
 body{
@@ -14,18 +14,18 @@ padding:20px;
 }
 
 .container{
-max-width:720px;
+max-width:700px;
 margin:auto;
 }
 
 h1{
 color:#2f6f5e;
-margin-bottom:4px;
+margin-bottom:6px;
 }
 
 .subtitle{
 color:#7a8a93;
-margin-bottom:20px;
+margin-bottom:18px;
 }
 
 textarea{
@@ -34,7 +34,7 @@ padding:14px;
 border-radius:14px;
 border:1px solid #d7dde2;
 font-size:18px;
-min-height:120px;
+min-height:110px;
 }
 
 button{
@@ -49,10 +49,10 @@ font-size:18px;
 
 .card{
 background:white;
-padding:18px;
-border-radius:16px;
-margin-top:16px;
-box-shadow:0 2px 6px rgba(0,0,0,.05);
+padding:16px;
+border-radius:14px;
+margin-top:14px;
+box-shadow:0 2px 5px rgba(0,0,0,.05);
 }
 
 .label{
@@ -63,18 +63,17 @@ margin-bottom:6px;
 
 .ok{color:#2f8f55}
 .err{color:#c0392b}
-.warn{color:#d68910}
 
 .rewrite{
 background:#e8f1ed;
-padding:12px;
-border-radius:10px;
+padding:10px;
+border-radius:8px;
 }
 
 .meaning{
 background:#e8f1ed;
-padding:12px;
-border-radius:10px;
+padding:10px;
+border-radius:8px;
 }
 </style>
 </head>
@@ -82,13 +81,12 @@ border-radius:10px;
 <body>
 <div class="container">
 
-<h1>🧠 Grammar Lab AI</h1>
-<div class="subtitle">Flexible grammar + natural rewrite + meaning</div>
+<h1>Grammar Lab</h1>
+<div class="subtitle">Quick grammar check</div>
 
 <textarea id="input" placeholder="Type sentence..."></textarea>
-<button onclick="analyze()">Analisis</button>
+<button onclick="analyze()">Check</button>
 
-<div id="syntax" class="card"></div>
 <div id="issues" class="card"></div>
 <div id="rewrite" class="card"></div>
 <div id="meaning" class="card"></div>
@@ -98,20 +96,8 @@ border-radius:10px;
 <script>
 
 const pronouns = ["i","you","we","they","he","she","it"];
-const beForms = ["am","is","are","was","were","be","been","being"];
-const modals = ["will","would","can","could","shall","should","may","might","must"];
-const verbsBase = ["eat","go","take","make","do","say","get","see","know","need","want","feel","be","have"];
-
-function isAdjective(word){
-if(word.endsWith("y")) return true;
-if(word.endsWith("ful")) return true;
-if(word.endsWith("ous")) return true;
-if(word.endsWith("ive")) return true;
-if(word.endsWith("able")) return true;
-if(word.endsWith("al")) return true;
-if(word.endsWith("ed")) return true;
-return false;
-}
+const beForms = ["am","is","are","was","were"];
+const modals = ["will","would","can","could","should","shall","may","might","must"];
 
 function analyze(){
 
@@ -120,73 +106,40 @@ if(!text) return;
 
 let words = text.toLowerCase().split(/\s+/);
 
-let subject = "";
-let mainVerb = "";
-let issues = [];
-let rewrite = text;
-let meaning = "";
+let issues=[];
+let rewrite=text;
 
-if(pronouns.includes(words[0])){
-subject = words[0];
+/* RULE 1: pronoun + word => add BE */
+if(words.length==2 && pronouns.includes(words[0]) && !beForms.includes(words[1])){
+issues.push("Missing BE");
+rewrite = words[0]+" am "+words[1];
 }
 
-if(words.length>1){
-mainVerb = words[1];
-}
-
-let missingBe=false;
-let modalError=false;
-let needInf=false;
-
-/* RULE 1: pronoun + adjective => need BE */
-if(pronouns.includes(words[0]) && words.length==2 && isAdjective(words[1])){
-missingBe=true;
-rewrite = words[0] + " am " + words[1];
-}
-
-/* RULE 2: modal + verb-ing error */
-if(modals.includes(words[1]) && words[2] && words[2].endsWith("ing")){
-modalError=true;
+/* RULE 2: modal + ing */
+if(words.length>=3 && modals.includes(words[1]) && words[2].endsWith("ing")){
+issues.push("Modal + base verb");
 rewrite = words[0]+" "+words[1]+" "+words[2].replace("ing","");
 }
 
-/* RULE 3: need + verb (no to) */
-if(words[1]=="need" && words[2] && !words[2].startsWith("to")){
-needInf=true;
+/* RULE 3: need + verb */
+if(words.length>=3 && words[1]=="need" && words[2]!="to"){
+issues.push("need → to infinitive");
 rewrite = words[0]+" need to "+words.slice(2).join(" ");
 }
 
-/* RULE 4: be + adjective natural */
-if(pronouns.includes(words[0]) && beForms.includes(words[1]) && words.length==3 && isAdjective(words[2])){
-rewrite = words[0]+" "+words[1]+" "+words[2];
-}
-
-/* ISSUES BUILD */
-let issueText="";
-
-if(missingBe){
-issueText+="<div class='err'>❌ Missing BE before adjective</div>";
-}
-if(modalError){
-issueText+="<div class='err'>❌ Modal must use base verb</div>";
-}
-if(needInf){
-issueText+="<div class='err'>❌ 'need' requires to-infinitive</div>";
-}
-if(!missingBe && !modalError && !needInf){
-issueText="<div class='ok'>✔ Natural & correct</div>";
+/* OUTPUT ISSUES */
+let issueHTML="";
+if(issues.length==0){
+issueHTML="<div class='ok'>✔ OK</div>";
+}else{
+issues.forEach(i=> issueHTML+="<div class='err'>❌ "+i+"</div>");
 }
 
 /* MEANING SIMPLE */
-meaning = translateSimple(rewrite);
-
-/* OUTPUT */
-document.getElementById("syntax").innerHTML=
-"<div class='label'>Syntax</div>"+
-"Subject: "+subject+"<br>Main: "+mainVerb;
+let meaning = translateSimple(rewrite);
 
 document.getElementById("issues").innerHTML=
-"<div class='label'>Issues</div>"+issueText;
+"<div class='label'>Issues</div>"+issueHTML;
 
 document.getElementById("rewrite").innerHTML=
 "<div class='label'>Rewrite</div><div class='rewrite'>"+rewrite+"</div>";
@@ -195,22 +148,20 @@ document.getElementById("meaning").innerHTML=
 "<div class='label'>Meaning</div><div class='meaning'>"+meaning+"</div>";
 }
 
-/* VERY SIMPLE TRANSLATOR */
 function translateSimple(s){
 
 s=s.toLowerCase();
 
-if(s.includes("hungry")) return "Aku lapar";
-if(s.includes("thirsty")) return "Aku haus";
-if(s.includes("sleepy")) return "Aku mengantuk";
-if(s.includes("tired")) return "Aku lelah";
-if(s.includes("need")) return "Aku perlu";
+if(s.includes("hungry")) return "lapar";
+if(s.includes("thirsty")) return "haus";
+if(s.includes("sleepy")) return "mengantuk";
+if(s.includes("tired")) return "lelah";
 if(s.includes("eat")) return "makan";
+if(s.includes("drink")) return "minum";
 
-return "Makna umum: "+s;
+return s;
 }
 
-/* ENTER = ANALYZE */
 document.getElementById("input").addEventListener("keydown",function(e){
 if(e.key==="Enter"){
 e.preventDefault();
