@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>English Grammar AI Analyzer</title>
+<title>English Grammar Analyzer</title>
 
 <style>
 body{
@@ -45,8 +45,8 @@ th,td{padding:8px;border-bottom:1px solid #e6eeea}
 </head>
 <body>
 
-<h1>🧠 English Grammar AI Analyzer</h1>
-<div class="subtitle">Analisis struktur + naturalitas + arti</div>
+<h1>🧠 English Grammar Analyzer</h1>
+<div class="subtitle">Analisis struktur kalimat Inggris</div>
 
 <textarea id="input">I go to school</textarea>
 <button onclick="analyze()">Analyze</button>
@@ -54,55 +54,75 @@ th,td{padding:8px;border-bottom:1px solid #e6eeea}
 <div id="result"></div>
 
 <script>
-async function analyze(){
+const verbs=["am","is","are","was","were","be","been","being",
+"go","goes","went","gone",
+"make","makes","made",
+"take","takes","took","taken",
+"eat","eats","ate","eaten",
+"see","saw","seen",
+"come","came","coming",
+"do","does","did","done",
+"have","has","had"]
 
+const prepositions=["to","in","on","at","with","from","into","onto","over","under","of","for","about"]
+
+function analyze(){
 const text=document.getElementById("input").value.trim()
 if(!text)return
 
-document.getElementById("result").innerHTML="Menganalisis..."
+const words=text.split(/\s+/)
 
-try{
+let rows=[]
 
-const res=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(
-"https://grammar-ai-proxy.vercel.app/analyze?text="+encodeURIComponent(text)
-))
+words.forEach((w,i)=>{
+let role="Kata"
+let type="Tidak diketahui"
+let exp=""
 
-const j=await res.json()
-
-render(j)
-
-}catch(e){
-document.getElementById("result").innerHTML="❌ AI tidak bisa diakses"
+if(i===0){
+role="Subjek"
+type="Kata ganti / noun"
+exp="Pelaku utama kalimat"
 }
+else if(verbs.includes(w.toLowerCase())){
+role="Predikat"
+type="Verb"
+exp="Kata kerja utama"
+}
+else if(prepositions.includes(w.toLowerCase())){
+role="Preposisi"
+type="Preposition"
+exp="Kata depan relasi"
+}
+else{
+role="Pelengkap"
+type="Object / modifier"
+exp="Informasi tambahan"
 }
 
-function render(j){
+rows.push({w,role,type,exp})
+})
 
+render(rows,text)
+}
+
+function render(rows,text){
 let html=`<div class="card">
 <table>
 <tr><th>Bagian</th><th>Peran</th><th>Jenis</th><th>Penjelasan</th></tr>`
 
-j.segments.forEach(s=>{
+rows.forEach(r=>{
 html+=`<tr>
-<td>${s.text}</td>
-<td>${s.role}</td>
-<td>${s.type}</td>
-<td>${s.explanation}</td>
+<td>${r.w}</td>
+<td>${r.role}</td>
+<td>${r.type}</td>
+<td>${r.exp}</td>
 </tr>`
 })
 
 html+=`</table></div>`
 
-html+=`<div class="card"><b>Naturalitas:</b> ${j.natural}</div>`
-html+=`<div class="card"><b>Meaning:</b> ${j.meaning}</div>`
-
-if(j.rewrite){
-html+=`<div class="card"><b>Rewrite:</b> ${j.rewrite}</div>`
-}
-
-if(j.idiom){
-html+=`<div class="card"><b>Idiom:</b> ${j.idiom}</div>`
-}
+html+=`<div class="card"><b>Meaning:</b> (terjemahan sederhana)</div>`
 
 document.getElementById("result").innerHTML=html
 }
