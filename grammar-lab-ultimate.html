@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grammar Lab Ultimate</title>
+
+<style>
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
+body{margin:0;background:#f4f8f6}
+header{background:#fff;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+h1{margin:0;color:#1f7a5c}
+.sub{font-size:13px;color:#6b7280}
+
+.container{padding:16px;max-width:820px;margin:auto}
+
+textarea{
+width:100%;min-height:90px;padding:12px;
+border-radius:12px;border:1px solid #ddd;font-size:16px
+}
+
+button{
+margin-top:10px;background:#1f7a5c;color:#fff;
+border:none;border-radius:10px;padding:10px 14px;font-size:15px
+}
+
+.card{
+background:#fff;border-radius:14px;padding:14px;margin-top:14px;
+box-shadow:0 2px 6px rgba(0,0,0,.05)
+}
+
+.title{font-weight:700;color:#1f7a5c;margin-bottom:6px}
+.issue{color:#c0392b}
+.good{color:#1f7a5c}
+.suggestion{background:#ecfdf5;padding:10px;border-radius:10px;margin-top:6px;font-style:italic}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🧪 Grammar Lab Ultimate</h1>
+<div class="sub">Analisis grammar & tense lengkap (offline)</div>
+</header>
+
+<div class="container">
+
+<textarea id="sentence" placeholder="Tempel kalimat Inggris..."></textarea>
+<button onclick="analyze()">Analisis</button>
+
+<div id="structure" class="card" style="display:none"></div>
+<div id="tense" class="card" style="display:none"></div>
+<div id="issues" class="card" style="display:none"></div>
+<div id="suggestion" class="card" style="display:none"></div>
+
+</div>
+
+<script src="https://unpkg.com/compromise"></script>
+
+<script>
+function detectTense(text){
+let t=text.toLowerCase()
+
+if(/\b(has|have)\s+been\s+\w+ing\b/.test(t)) return "Present Perfect Continuous"
+if(/\bhad\s+been\s+\w+ing\b/.test(t)) return "Past Perfect Continuous"
+if(/\bwill\s+have\s+been\s+\w+ing\b/.test(t)) return "Future Perfect Continuous"
+
+if(/\bhas|have\s+\w+ed\b/.test(t)) return "Present Perfect"
+if(/\bhad\s+\w+ed\b/.test(t)) return "Past Perfect"
+if(/\bwill\s+have\s+\w+ed\b/.test(t)) return "Future Perfect"
+
+if(/\b(am|is|are)\s+\w+ing\b/.test(t)) return "Present Continuous"
+if(/\b(was|were)\s+\w+ing\b/.test(t)) return "Past Continuous"
+if(/\bwill\s+be\s+\w+ing\b/.test(t)) return "Future Continuous"
+
+if(/\b(yesterday|ago|last)\b/.test(t)) return "Past Simple"
+if(/\bwill\b/.test(t)) return "Future Simple"
+
+return "Present Simple"
+}
+
+function analyze(){
+let text=document.getElementById("sentence").value.trim()
+if(!text) return
+
+let doc=nlp(text)
+let lower=text.toLowerCase()
+
+// STRUCTURE
+let subject=doc.match("#Pronoun|#Noun").first().text()
+let verb=doc.verbs().first().text()
+let object=doc.match("#Noun").last().text()
+let adj=doc.adjectives().out("text")
+let adv=doc.adverbs().out("text")
+let prep=doc.prepositions().out("text")
+let modal=doc.match("#Modal").out("text")
+
+let sHTML=`
+<div class="title">Structure</div>
+<div>Subject: ${subject||"-"}</div>
+<div>Verb: ${verb||"-"}</div>
+<div>Object: ${object||"-"}</div>
+<div>Adjective: ${adj||"-"}</div>
+<div>Adverb: ${adv||"-"}</div>
+<div>Preposition: ${prep||"-"}</div>
+<div>Modal: ${modal||"-"}</div>
+`
+
+let sBox=document.getElementById("structure")
+sBox.innerHTML=sHTML
+sBox.style.display="block"
+
+// TENSE
+let tense=detectTense(text)
+let timeMarker=(lower.match(/\b(yesterday|today|tomorrow|now|ago|last|next)\b/)||["-"])[0]
+
+let tHTML=`
+<div class="title">Tense</div>
+<div>Detected: ${tense}</div>
+<div>Time marker: ${timeMarker}</div>
+`
+
+let tBox=document.getElementById("tense")
+tBox.innerHTML=tHTML
+tBox.style.display="block"
+
+// ISSUES
+let issues=[]
+
+// tense mismatch
+if(timeMarker==="yesterday" && tense.includes("Present"))
+issues.push("Tense tidak sesuai penanda waktu lampau")
+
+// adverb placement
+if(/\bvery\s+like\b/.test(lower))
+issues.push("Posisi adverb tidak natural")
+
+// verb chain
+if(/\blike\s+eat\b/.test(lower))
+issues.push("Verb chain tidak benar")
+
+// be + base
+if(/\b(am|is|are)\s+\w+\b/.test(lower) && !/\bing\b/.test(lower))
+issues.push("Setelah be gunakan verb-ing")
+
+// has/have + past
+if(/\b(has|have)\s+(went|did|ate|saw)\b/.test(lower))
+issues.push("Setelah has/have gunakan past participle")
+
+// plural missing
+if(/\b(like|love|eat)\s+apple\b/.test(lower))
+issues.push("Kemungkinan perlu plural")
+
+// article
+if(/\bin\s+morning\b/.test(lower))
+issues.push("Gunakan 'in the morning'")
+
+// missing be
+if(/\bi\s+hungry\b/.test(lower))
+issues.push("Perlu be-verb")
+
+// passive
+if(/\bis\s+\w+ed\s+by\b/.test(lower)===false && /\bby\b/.test(lower) && /\bwas|were|is|are\b/.test(lower))
+issues.push("Struktur passive mungkin salah")
+
+let iBox=document.getElementById("issues")
+if(issues.length){
+iBox.innerHTML="<div class='title'>Issues</div>"+
+issues.map(x=>"<div class='issue'>❌ "+x+"</div>").join("")
+}else{
+iBox.innerHTML="<div class='title'>Issues</div><div class='good'>✔ Tidak terdeteksi masalah utama</div>"
+}
+iBox.style.display="block"
+
+// SUGGESTION
+let sug=text
+
+sug=sug.replace(/very like/gi,"really like")
+sug=sug.replace(/like eat/gi,"like eating")
+sug=sug.replace(/\bin morning\b/gi,"in the morning")
+sug=sug.replace(/\bapple\b(?=.*like|love|eat)/i,"apples")
+sug=sug.replace(/\bgo\b(?=.*yesterday)/i,"went")
+sug=sug.replace(/\beat\b(?=.*yesterday)/i,"ate")
+sug=sug.replace(/\bhas went\b/i,"has gone")
+sug=sug.replace(/\bi hungry\b/i,"I am hungry")
+
+let sugBox=document.getElementById("suggestion")
+if(sug!==text){
+sugBox.innerHTML="<div class='title'>Suggestion</div><div class='suggestion'>"+sug+"</div>"
+}else{
+sugBox.innerHTML=""
+}
+sugBox.style.display=sug!==text?"block":"none"
+
+}
+</script>
+
+</body>
+</html>
