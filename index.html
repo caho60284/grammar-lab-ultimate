@@ -160,6 +160,12 @@ sug=sug.replace(new RegExp(`${m}\\s+([a-z]+)ing`,"i"),`${m} $1`)
 }
 })
 
+// ===== FEEL COMPLEMENT =====
+if(/\bfeel\s+[a-z]+ing\b/.test(lower) && !/\bfeel\s+like\s+[a-z]+ing\b/.test(lower)){
+add('Verb complement: "feel" harus diikuti adjective atau "like + ing"')
+sug=sug.replace(/\bfeel\s+([a-z]+ing)/i,"feel like $1")
+}
+
 // ===== OUTPUT =====
 let issueBox=document.getElementById("issues")
 if(issues.length){
