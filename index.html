@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grammar Lab</title>
+<title>English Grammar Structure Analyzer</title>
 
 <style>
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
 background:#f4f6f8;
 margin:0;
 padding:20px;
 }
 
 .container{
-max-width:700px;
+max-width:900px;
 margin:auto;
 }
 
@@ -24,56 +24,47 @@ margin-bottom:6px;
 }
 
 .subtitle{
-color:#7a8a93;
+color:#6b7c76;
 margin-bottom:18px;
 }
 
 textarea{
 width:100%;
 padding:14px;
-border-radius:14px;
-border:1px solid #d7dde2;
+border-radius:12px;
+border:1px solid #ccd3d8;
 font-size:18px;
-min-height:110px;
+min-height:120px;
 }
 
 button{
 margin-top:14px;
-padding:12px 22px;
+padding:12px 24px;
 border:none;
-border-radius:14px;
+border-radius:12px;
 background:#2f6f5e;
 color:white;
 font-size:18px;
 }
 
-.card{
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
 background:white;
-padding:16px;
-border-radius:14px;
-margin-top:14px;
-box-shadow:0 2px 5px rgba(0,0,0,.05);
+border-radius:12px;
+overflow:hidden;
 }
 
-.label{
+th,td{
+padding:10px;
+border-bottom:1px solid #e5e9ec;
+text-align:left;
+}
+
+th{
+background:#eef3f1;
 color:#2f6f5e;
-font-weight:600;
-margin-bottom:6px;
-}
-
-.ok{color:#2f8f55}
-.err{color:#c0392b}
-
-.rewrite{
-background:#e8f1ed;
-padding:10px;
-border-radius:8px;
-}
-
-.meaning{
-background:#e8f1ed;
-padding:10px;
-border-radius:8px;
 }
 </style>
 </head>
@@ -81,88 +72,201 @@ border-radius:8px;
 <body>
 <div class="container">
 
-<h1>Grammar Lab</h1>
-<div class="subtitle">Quick grammar check</div>
+<h1>English Grammar Structure Analyzer</h1>
+<div class="subtitle">Complete structural identification of sentence elements</div>
 
 <textarea id="input" placeholder="Type sentence..."></textarea>
-<button onclick="analyze()">Check</button>
+<button onclick="analyze()">Analyze</button>
 
-<div id="issues" class="card"></div>
-<div id="rewrite" class="card"></div>
-<div id="meaning" class="card"></div>
+<table>
+<thead>
+<tr>
+<th>Segment</th>
+<th>Type</th>
+<th>Subtype</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody id="result"></tbody>
+</table>
 
 </div>
 
 <script>
 
-const pronouns = ["i","you","we","they","he","she","it"];
-const beForms = ["am","is","are","was","were"];
-const modals = ["will","would","can","could","should","shall","may","might","must"];
+const pronouns = ["i","you","he","she","it","we","they"];
+const modals = ["will","would","can","could","may","might","must","shall","should"];
+const beForms = ["am","is","are","was","were","be","been","being"];
+const prepositions = ["in","on","at","with","by","for","to","from","of","under","over","into","onto","about","before","after"];
+const adverbTime = ["today","tonight","yesterday","now","tomorrow","later","soon","morning","evening","night","always","often","sometimes","never"];
+const adverbPlace = ["here","there","inside","outside","upstairs","downstairs"];
 
 function analyze(){
 
 let text = document.getElementById("input").value.trim();
 if(!text) return;
 
-let words = text.toLowerCase().split(/\s+/);
+let words = text.split(" ");
+let rows = [];
 
-let issues=[];
-let rewrite=text;
-
-/* RULE 1: pronoun + word => add BE */
-if(words.length==2 && pronouns.includes(words[0]) && !beForms.includes(words[1])){
-issues.push("Missing BE");
-rewrite = words[0]+" am "+words[1];
+/* SUBJECT */
+if(pronouns.includes(words[0].toLowerCase())){
+rows.push([
+words[0],
+"Subject",
+"Pronoun subject",
+"Personal pronoun acting as the subject of the sentence"
+]);
+}
+else{
+rows.push([
+words[0],
+"Subject",
+"Noun subject",
+"Noun acting as the subject of the sentence"
+]);
 }
 
-/* RULE 2: modal + ing */
-if(words.length>=3 && modals.includes(words[1]) && words[2].endsWith("ing")){
-issues.push("Modal + base verb");
-rewrite = words[0]+" "+words[1]+" "+words[2].replace("ing","");
+/* GERUND SUBJECT */
+if(words[0].toLowerCase().endsWith("ing")){
+rows.push([
+words[0],
+"Subject",
+"Gerund phrase",
+"Verb-ing form functioning as a noun subject"
+]);
 }
 
-/* RULE 3: need + verb */
-if(words.length>=3 && words[1]=="need" && words[2]!="to"){
-issues.push("need → to infinitive");
-rewrite = words[0]+" need to "+words.slice(2).join(" ");
+/* PREPOSITIONAL PHRASES */
+for(let i=0;i<words.length;i++){
+if(prepositions.includes(words[i].toLowerCase())){
+let obj = words[i+1] || "";
+rows.push([
+words[i]+" "+obj,
+"Prepositional Phrase",
+"Preposition + object",
+"A phrase beginning with a preposition followed by its object"
+]);
+
+rows.push([
+words[i],
+"Preposition",
+"Preposition type",
+"Word that shows relationship such as place, time, direction, or purpose"
+]);
+
+if(obj){
+rows.push([
+obj,
+"Object of Preposition",
+"Noun object",
+"Noun that completes the meaning of the preposition"
+]);
+}
+}
 }
 
-/* OUTPUT ISSUES */
-let issueHTML="";
-if(issues.length==0){
-issueHTML="<div class='ok'>✔ OK</div>";
-}else{
-issues.forEach(i=> issueHTML+="<div class='err'>❌ "+i+"</div>");
+/* MODALS */
+for(let i=0;i<words.length;i++){
+if(modals.includes(words[i].toLowerCase())){
+rows.push([
+words[i],
+"Verb",
+"Modal verb",
+"Auxiliary verb expressing ability, possibility, permission, or obligation"
+]);
+}
 }
 
-/* MEANING SIMPLE */
-let meaning = translateSimple(rewrite);
-
-document.getElementById("issues").innerHTML=
-"<div class='label'>Issues</div>"+issueHTML;
-
-document.getElementById("rewrite").innerHTML=
-"<div class='label'>Rewrite</div><div class='rewrite'>"+rewrite+"</div>";
-
-document.getElementById("meaning").innerHTML=
-"<div class='label'>Meaning</div><div class='meaning'>"+meaning+"</div>";
+/* BE VERB + ING */
+for(let i=0;i<words.length;i++){
+if(beForms.includes(words[i].toLowerCase()) && words[i+1]?.endsWith("ing")){
+rows.push([
+words[i]+" "+words[i+1],
+"Verb Phrase",
+"Continuous aspect",
+"Be verb followed by verb-ing indicating ongoing action"
+]);
+}
 }
 
-function translateSimple(s){
-
-s=s.toLowerCase();
-
-if(s.includes("hungry")) return "lapar";
-if(s.includes("thirsty")) return "haus";
-if(s.includes("sleepy")) return "mengantuk";
-if(s.includes("tired")) return "lelah";
-if(s.includes("eat")) return "makan";
-if(s.includes("drink")) return "minum";
-
-return s;
+/* INFINITIVE */
+for(let i=0;i<words.length;i++){
+if(words[i].toLowerCase()=="to" && words[i+1]){
+rows.push([
+"to "+words[i+1],
+"Infinitive Phrase",
+"To-infinitive",
+"Base verb preceded by 'to' expressing purpose or action"
+]);
+}
 }
 
-document.getElementById("input").addEventListener("keydown",function(e){
+/* GERUND PHRASE */
+words.forEach(w=>{
+if(w.toLowerCase().endsWith("ing")){
+rows.push([
+w,
+"Gerund or Present Participle",
+"Verb-ing form",
+"Verb form ending in -ing functioning as noun or part of verb phrase"
+]);
+}
+});
+
+/* ADVERB OF MANNER */
+words.forEach(w=>{
+if(w.toLowerCase().endsWith("ly")){
+rows.push([
+w,
+"Adverb",
+"Adverb of manner",
+"Describes how an action is performed"
+]);
+}
+});
+
+/* ADVERB TIME */
+words.forEach(w=>{
+if(adverbTime.includes(w.toLowerCase())){
+rows.push([
+w,
+"Adverb",
+"Adverb of time",
+"Indicates when the action occurs"
+]);
+}
+});
+
+/* ADVERB PLACE */
+words.forEach(w=>{
+if(adverbPlace.includes(w.toLowerCase())){
+rows.push([
+w,
+"Adverb",
+"Adverb of place",
+"Indicates location of the action"
+]);
+}
+});
+
+/* RENDER */
+let tbody = document.getElementById("result");
+tbody.innerHTML="";
+
+rows.forEach(r=>{
+let tr=document.createElement("tr");
+r.forEach(c=>{
+let td=document.createElement("td");
+td.textContent=c;
+tr.appendChild(td);
+});
+tbody.appendChild(tr);
+});
+
+}
+
+document.getElementById("input").addEventListener("keydown",e=>{
 if(e.key==="Enter"){
 e.preventDefault();
 analyze();
