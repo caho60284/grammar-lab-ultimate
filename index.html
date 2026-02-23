@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grammar Lab Ultimate</title>
+<title>Grammar Lab Expert</title>
 
 <style>
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
@@ -12,10 +12,10 @@ header{background:#fff;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 h1{margin:0;color:#1f7a5c}
 .sub{font-size:13px;color:#6b7280}
 
-.container{padding:16px;max-width:820px;margin:auto}
+.container{padding:16px;max-width:900px;margin:auto}
 
 textarea{
-width:100%;min-height:90px;padding:12px;
+width:100%;min-height:100px;padding:12px;
 border-radius:12px;border:1px solid #ddd;font-size:16px
 }
 
@@ -30,7 +30,7 @@ box-shadow:0 2px 6px rgba(0,0,0,.05)
 }
 
 .title{font-weight:700;color:#1f7a5c;margin-bottom:6px}
-.issue{color:#c0392b}
+.issue{color:#c0392b;margin:3px 0}
 .good{color:#1f7a5c}
 .suggestion{background:#ecfdf5;padding:10px;border-radius:10px;margin-top:6px;font-style:italic}
 </style>
@@ -39,8 +39,8 @@ box-shadow:0 2px 6px rgba(0,0,0,.05)
 <body>
 
 <header>
-<h1>🧪 Grammar Lab Ultimate</h1>
-<div class="sub">Analisis grammar & tense lengkap (offline)</div>
+<h1>🧠 Grammar Lab Expert</h1>
+<div class="sub">Syntactic grammar analyzer offline</div>
 </header>
 
 <div class="container">
@@ -48,152 +48,139 @@ box-shadow:0 2px 6px rgba(0,0,0,.05)
 <textarea id="sentence" placeholder="Tempel kalimat Inggris..."></textarea>
 <button onclick="analyze()">Analisis</button>
 
-<div id="structure" class="card" style="display:none"></div>
-<div id="tense" class="card" style="display:none"></div>
+<div id="syntax" class="card" style="display:none"></div>
 <div id="issues" class="card" style="display:none"></div>
 <div id="suggestion" class="card" style="display:none"></div>
 
 </div>
 
-<script src="https://unpkg.com/compromise"></script>
-
 <script>
-function detectTense(text){
-let t=text.toLowerCase()
 
-if(/\b(has|have)\s+been\s+\w+ing\b/.test(t)) return "Present Perfect Continuous"
-if(/\bhad\s+been\s+\w+ing\b/.test(t)) return "Past Perfect Continuous"
-if(/\bwill\s+have\s+been\s+\w+ing\b/.test(t)) return "Future Perfect Continuous"
+// ===== BASIC LEXICON =====
+const infinitiveVerbs=["want","need","plan","decide","try","hope","learn","refuse"]
+const beForms=["am","is","are","was","were","be","been"]
+const modals=["can","could","may","might","must","should","will","would"]
+const pastMap={go:"went",eat:"ate",see:"saw",do:"did",make:"made"}
 
-if(/\bhas|have\s+\w+ed\b/.test(t)) return "Present Perfect"
-if(/\bhad\s+\w+ed\b/.test(t)) return "Past Perfect"
-if(/\bwill\s+have\s+\w+ed\b/.test(t)) return "Future Perfect"
-
-if(/\b(am|is|are)\s+\w+ing\b/.test(t)) return "Present Continuous"
-if(/\b(was|were)\s+\w+ing\b/.test(t)) return "Past Continuous"
-if(/\bwill\s+be\s+\w+ing\b/.test(t)) return "Future Continuous"
-
-if(/\b(yesterday|ago|last)\b/.test(t)) return "Past Simple"
-if(/\bwill\b/.test(t)) return "Future Simple"
-
-return "Present Simple"
+// ===== TOKENIZE =====
+function tokenize(t){
+return t.toLowerCase().replace(/[.,!?]/g,"").split(/\s+/)
 }
 
+// ===== SUBJECT DETECT =====
+function detectSubject(tokens){
+const pronouns=["i","you","he","she","we","they"]
+for(let i=0;i<tokens.length;i++){
+if(pronouns.includes(tokens[i])) return tokens[i]
+}
+return tokens[0]||""
+}
+
+// ===== MAIN VERB DETECT =====
+function detectVerb(tokens){
+for(let t of tokens){
+if(infinitiveVerbs.includes(t)) return t
+if(Object.keys(pastMap).includes(t)) return t
+if(modals.includes(t)) return t
+}
+return tokens[1]||""
+}
+
+// ===== CLAUSE DETECT =====
+function detectClause(text){
+if(/\balthough|because|if|when|while\b/i.test(text))
+return "Subordinate clause"
+return "Simple clause"
+}
+
+// ===== ANALYZE =====
 function analyze(){
+
 let text=document.getElementById("sentence").value.trim()
 if(!text) return
 
-let doc=nlp(text)
+let tokens=tokenize(text)
 let lower=text.toLowerCase()
 
-// STRUCTURE
-let subject=doc.match("#Pronoun|#Noun").first().text()
-let verb=doc.verbs().first().text()
-let object=doc.match("#Noun").last().text()
-let adj=doc.adjectives().out("text")
-let adv=doc.adverbs().out("text")
-let prep=doc.prepositions().out("text")
-let modal=doc.match("#Modal").out("text")
+let subject=detectSubject(tokens)
+let verb=detectVerb(tokens)
+let clause=detectClause(text)
 
-let sHTML=`
-<div class="title">Structure</div>
+let syntaxBox=document.getElementById("syntax")
+syntaxBox.innerHTML=`
+<div class="title">Syntax</div>
 <div>Subject: ${subject||"-"}</div>
-<div>Verb: ${verb||"-"}</div>
-<div>Object: ${object||"-"}</div>
-<div>Adjective: ${adj||"-"}</div>
-<div>Adverb: ${adv||"-"}</div>
-<div>Preposition: ${prep||"-"}</div>
-<div>Modal: ${modal||"-"}</div>
+<div>Main verb: ${verb||"-"}</div>
+<div>Clause type: ${clause}</div>
 `
+syntaxBox.style.display="block"
 
-let sBox=document.getElementById("structure")
-sBox.innerHTML=sHTML
-sBox.style.display="block"
-
-// TENSE
-let tense=detectTense(text)
-let timeMarker=(lower.match(/\b(yesterday|today|tomorrow|now|ago|last|next)\b/)||["-"])[0]
-
-let tHTML=`
-<div class="title">Tense</div>
-<div>Detected: ${tense}</div>
-<div>Time marker: ${timeMarker}</div>
-`
-
-let tBox=document.getElementById("tense")
-tBox.innerHTML=tHTML
-tBox.style.display="block"
-
-// ISSUES
 let issues=[]
-
-// tense mismatch
-if(timeMarker==="yesterday" && tense.includes("Present"))
-issues.push("Tense tidak sesuai penanda waktu lampau")
-
-// adverb placement
-if(/\bvery\s+like\b/.test(lower))
-issues.push("Posisi adverb tidak natural")
-
-// verb chain
-if(/\blike\s+eat\b/.test(lower))
-issues.push("Verb chain tidak benar")
-
-// be + base
-if(/\b(am|is|are)\s+\w+\b/.test(lower) && !/\bing\b/.test(lower))
-issues.push("Setelah be gunakan verb-ing")
-
-// has/have + past
-if(/\b(has|have)\s+(went|did|ate|saw)\b/.test(lower))
-issues.push("Setelah has/have gunakan past participle")
-
-// plural missing
-if(/\b(like|love|eat)\s+apple\b/.test(lower))
-issues.push("Kemungkinan perlu plural")
-
-// article
-if(/\bin\s+morning\b/.test(lower))
-issues.push("Gunakan 'in the morning'")
-
-// missing be
-if(/\bi\s+hungry\b/.test(lower))
-issues.push("Perlu be-verb")
-
-// passive
-if(/\bis\s+\w+ed\s+by\b/.test(lower)===false && /\bby\b/.test(lower) && /\bwas|were|is|are\b/.test(lower))
-issues.push("Struktur passive mungkin salah")
-
-let iBox=document.getElementById("issues")
-if(issues.length){
-iBox.innerHTML="<div class='title'>Issues</div>"+
-issues.map(x=>"<div class='issue'>❌ "+x+"</div>").join("")
-}else{
-iBox.innerHTML="<div class='title'>Issues</div><div class='good'>✔ Tidak terdeteksi masalah utama</div>"
-}
-iBox.style.display="block"
-
-// SUGGESTION
 let sug=text
 
-sug=sug.replace(/very like/gi,"really like")
-sug=sug.replace(/like eat/gi,"like eating")
-sug=sug.replace(/\bin morning\b/gi,"in the morning")
-sug=sug.replace(/\bapple\b(?=.*like|love|eat)/i,"apples")
-sug=sug.replace(/\bgo\b(?=.*yesterday)/i,"went")
-sug=sug.replace(/\beat\b(?=.*yesterday)/i,"ate")
-sug=sug.replace(/\bhas went\b/i,"has gone")
-sug=sug.replace(/\bi hungry\b/i,"I am hungry")
+function add(msg){issues.push(msg)}
+
+// ===== INFINITIVE COMPLEMENT =====
+infinitiveVerbs.forEach(v=>{
+let r=new RegExp(`\\b${v}\\s+[a-z]+`)
+if(r.test(lower) && !new RegExp(`\\b${v}\\s+to\\s+`).test(lower)){
+add(`Verb complement: "${v}" harus diikuti to-infinitive`)
+sug=sug.replace(new RegExp(`${v}\\s+([a-z]+)`,"i"),`${v} to $1`)
+}
+})
+
+// ===== BE MISSING =====
+if(/\b(i|he|she|they|we)\s+(tired|hungry|happy|sad)\b/.test(lower)){
+add("Missing be-verb before adjective")
+sug=sug.replace(/\b(i|he|she|they|we)\s+(tired|hungry|happy|sad)\b/i,"$1 am $2")
+}
+
+// ===== POLARITY =====
+if(/\banything\b/.test(lower) && !/\bnot|never|n't\b/.test(lower)){
+add("Polarity: anything dipakai di negatif/interogatif")
+sug=sug.replace(/anything/i,"something")
+}
+
+// ===== TENSE =====
+if(/\byesterday|ago|last\b/.test(lower)){
+for(let v in pastMap){
+if(new RegExp(`\\b${v}\\b`).test(lower)){
+add("Tense mismatch with past marker")
+sug=sug.replace(new RegExp(v,"i"),pastMap[v])
+}
+}
+}
+
+// ===== MODAL BASE FORM =====
+modals.forEach(m=>{
+let r=new RegExp(`\\b${m}\\s+([a-z]+ing)`)
+if(r.test(lower)){
+add("Modal harus diikuti base verb (tanpa -ing)")
+sug=sug.replace(new RegExp(`${m}\\s+([a-z]+)ing`,"i"),`${m} $1`)
+}
+})
+
+// ===== OUTPUT =====
+let issueBox=document.getElementById("issues")
+if(issues.length){
+issueBox.innerHTML="<div class='title'>Issues</div>"+issues.map(x=>"❌ "+x).join("<br>")
+}else{
+issueBox.innerHTML="<div class='title'>Issues</div><div class='good'>✔ Tidak ada masalah utama</div>"
+}
+issueBox.style.display="block"
 
 let sugBox=document.getElementById("suggestion")
 if(sug!==text){
-sugBox.innerHTML="<div class='title'>Suggestion</div><div class='suggestion'>"+sug+"</div>"
+sug=sug.charAt(0).toUpperCase()+sug.slice(1)
+if(!/[.!?]$/.test(sug)) sug+="."
+sugBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+sug+"</div>"
+sugBox.style.display="block"
 }else{
-sugBox.innerHTML=""
+sugBox.style.display="none"
 }
-sugBox.style.display=sug!==text?"block":"none"
 
 }
+
 </script>
-
 </body>
 </html>
