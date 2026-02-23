@@ -7,195 +7,173 @@
 
 <style>
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-background:#f4f6f8;
-margin:0;
-padding:18px;
+  font-family: system-ui, Arial;
+  margin:0;
+  padding:20px;
+  background:#f4f7f6;
+  color:#1f2933;
 }
-
-.container{max-width:900px;margin:auto;}
-
-h1{color:#2f6f5e;font-size:26px;margin-bottom:14px}
-
+h1{
+  color:#2f6f5e;
+  margin-bottom:4px;
+}
+.subtitle{
+  color:#6b7280;
+  margin-bottom:20px;
+}
 textarea{
-width:100%;
-padding:16px;
-border-radius:14px;
-border:1px solid #d6dde2;
-font-size:18px;
-min-height:120px;
-box-sizing:border-box;
+  width:100%;
+  min-height:120px;
+  border-radius:14px;
+  border:1px solid #cbd5e1;
+  padding:14px;
+  font-size:18px;
 }
-
 button{
-margin-top:14px;
-padding:14px;
-border:none;
-border-radius:14px;
-background:#2f6f5e;
-color:white;
-font-size:18px;
-width:100%;
+  width:100%;
+  margin-top:14px;
+  background:#2f6f5e;
+  color:white;
+  border:none;
+  border-radius:14px;
+  padding:16px;
+  font-size:18px;
 }
-
 .card{
-margin-top:16px;
-background:white;
-border-radius:16px;
-padding:14px;
-box-shadow:0 3px 10px rgba(0,0,0,0.06);
+  background:white;
+  margin-top:18px;
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
 }
-
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #eef2f4;text-align:left}
-th{background:#eef3f1;color:#2f6f5e}
-
-.meaning{background:#eef6f3;padding:10px;border-radius:10px}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  padding:10px;
+  border-bottom:1px solid #e5e7eb;
+  text-align:left;
+  vertical-align:top;
+}
+th{
+  background:#ecf3f1;
+  color:#2f6f5e;
+}
+.meaning{
+  background:#e7f1ee;
+  padding:12px;
+  border-radius:10px;
+}
 </style>
 </head>
 
 <body>
-<div class="container">
 
 <h1>English Grammar Structure Analyzer</h1>
+<div class="subtitle">Analisis struktur kalimat Inggris lengkap</div>
 
 <textarea id="input" placeholder="Tulis kalimat Inggris..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>Bagian</th>
-<th>Peran</th>
-<th>Jenis</th>
-<th>Penjelasan</th>
-</tr>
-</thead>
-<tbody id="out"></tbody>
-</table>
-</div>
-
-<div class="card">
-<b>Meaning kalimat</b>
-<div id="meaning" class="meaning">-</div>
-</div>
-
-<div class="card">
-<b>Idiom / Phrase</b>
-<div id="idiom" class="meaning">-</div>
-</div>
-
-</div>
+<div id="result"></div>
 
 <script>
+const pronouns = ["i","you","he","she","it","we","they","me","him","her","us","them"];
+const modals = ["can","could","may","might","must","shall","should","will","would"];
+const preps = ["in","on","at","to","for","with","from","of","about","into","over","under","after","before"];
+const beVerbs = ["am","is","are","was","were","be","been","being"];
+
+function pos(word){
+  word = word.toLowerCase();
+
+  if(pronouns.includes(word)) return ["Subjek / objek","Kata ganti"];
+  if(modals.includes(word)) return ["Modal","Kata kerja bantu"];
+  if(preps.includes(word)) return ["Preposisi","Kata depan"];
+  if(beVerbs.includes(word)) return ["Kata kerja utama","Be verb"];
+  if(word.endsWith("ing")) return ["Verb-ing / Gerund","Kata kerja bentuk -ing"];
+  if(word.endsWith("ed")) return ["Verb past","Kata kerja lampau"];
+  if(word.endsWith("ly")) return ["Adverb","Kata keterangan"];
+  if(word.endsWith("ous")||word.endsWith("ful")||word.endsWith("ive")||word.endsWith("al")||word.endsWith("y"))
+    return ["Adjective","Kata sifat"];
+
+  return ["Kata benda / umum","Kemungkinan noun"];
+}
+
+function translate(word){
+  const dict = {
+    i:"aku",you:"kamu",he:"dia",she:"dia",we:"kami",they:"mereka",
+    am:"adalah",is:"adalah",are:"adalah",was:"adalah",were:"adalah",
+    happy:"senang",sad:"sedih",hungry:"lapar",thirsty:"haus",
+    sleepy:"mengantuk",eat:"makan",take:"mengambil",
+    coat:"mantel",make:"membuat",come:"datang"
+  };
+  return dict[word.toLowerCase()] || word;
+}
+
+function sentenceMeaning(words){
+  return words.map(w=>translate(w)).join(" ");
+}
 
 function analyze(){
+  const text = document.getElementById("input").value.trim();
+  if(!text) return;
 
-const text=document.getElementById("input").value.trim()
-const out=document.getElementById("out")
-const meaningBox=document.getElementById("meaning")
-const idiomBox=document.getElementById("idiom")
+  const words = text.replace(/[.,!?]/g,"").split(/\s+/);
 
-out.innerHTML=""
-meaningBox.innerHTML="-"
-idiomBox.innerHTML="-"
+  let rows = "";
+  words.forEach(w=>{
+    const [role,type] = pos(w);
+    rows += `
+      <tr>
+        <td>${w}</td>
+        <td>${role}</td>
+        <td>${type}</td>
+        <td>${explain(role,type)}</td>
+      </tr>`;
+  });
 
-if(!text)return
+  const meaning = sentenceMeaning(words);
 
-const norm=text
-.replace(/’/g,"'")
-.replace(/I'm/gi,"I am")
-.toLowerCase()
+  document.getElementById("result").innerHTML = `
+    <div class="card">
+      <table>
+        <tr>
+          <th>Bagian</th>
+          <th>Peran</th>
+          <th>Jenis</th>
+          <th>Penjelasan</th>
+        </tr>
+        ${rows}
+      </table>
+    </div>
 
-const words=norm.split(/\s+/)
-
-const be=["am","is","are","was","were"]
-const modals=["can","could","will","would","should","may","might","must"]
-
-let subject=null
-let verb=null
-let complement=null
-let clause=null
-
-// SUBJECT
-if(words.includes("i"))subject="I"
-
-// VERB
-for(let w of words){
-if(be.includes(w)||modals.includes(w)){
-verb=w
-break
-}
-}
-
-// COMPLEMENT
-if(verb && be.includes(verb)){
-let idx=words.indexOf(verb)
-complement=words.slice(idx+1).join(" ")
+    <div class="card">
+      <b>Meaning kalimat</b>
+      <div class="meaning">${meaning}</div>
+    </div>
+  `;
 }
 
-// CLAUSE (modal in complement)
-if(complement){
-let parts=complement.split(" ")
-for(let i=0;i<parts.length;i++){
-if(modals.includes(parts[i])){
-clause=parts.slice(i).join(" ")
-complement=parts.slice(0,i).join(" ")
-break
-}
-}
-}
-
-// OUTPUT ROW
-function row(a,b,c,d){
-out.innerHTML+=`<tr>
-<td>${a}</td>
-<td>${b}</td>
-<td>${c}</td>
-<td>${d}</td>
-</tr>`
+function explain(role,type){
+  if(role.includes("Subjek")) return "Pelaku atau yang dibicarakan dalam kalimat.";
+  if(role==="Modal") return "Kata kerja bantu yang menunjukkan kemampuan, kemungkinan, izin, atau keharusan.";
+  if(role==="Preposisi") return "Kata depan yang menunjukkan hubungan tempat, waktu, atau arah.";
+  if(type==="Be verb") return "Kata kerja penghubung antara subjek dan sifat/keadaan.";
+  if(type.includes("Adjective")) return "Kata sifat yang menjelaskan noun atau subjek.";
+  if(type.includes("Adverb")) return "Kata keterangan yang menjelaskan cara atau keadaan.";
+  if(type.includes("Verb")) return "Kata kerja yang menyatakan tindakan atau keadaan.";
+  return "Kata umum dalam kalimat.";
 }
 
-if(subject)row("I","Subjek utama","Kata ganti","Pelaku utama kalimat")
-if(verb)row(verb,"Kata kerja utama","Verb","Predikat utama")
-if(complement)row(complement,"Pelengkap","Adjective phrase","Menjelaskan subjek")
-if(clause)row(clause,"Klausa bawahan","Subordinate clause","Informasi tambahan")
-
-// =====================
-// MEANING ENGINE
-// =====================
-let meaning=text
-
-meaning=meaning
-.replace(/I am/gi,"Aku")
-.replace(/I'm/gi,"Aku")
-.replace(/so happy/gi,"sangat senang")
-.replace(/could/gi,"bisa")
-.replace(/make it/gi,"datang")
-.replace(/very/gi,"sangat")
-
-meaningBox.innerHTML=meaning
-
-// =====================
-// IDIOM ENGINE
-// =====================
-let idioms={
-"make it":"berhasil / bisa datang",
-"give up":"menyerah",
-"take off":"lepas landas",
-"look for":"mencari"
-}
-
-for(let k in idioms){
-if(norm.includes(k)){
-idiomBox.innerHTML=k+" = "+idioms[k]
-break
-}
-}
-
-}
-
+// ENTER = ANALYZE
+document.getElementById("input").addEventListener("keydown",function(e){
+  if(e.key==="Enter" && !e.shiftKey){
+    e.preventDefault();
+    analyze();
+  }
+});
 </script>
+
 </body>
 </html>
