@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grammar Lab Expert</title>
+<title>Grammar Lab</title>
 
 <style>
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
@@ -15,92 +15,79 @@ h1{margin:0;color:#1f7a5c}
 .container{padding:16px;max-width:900px;margin:auto}
 
 textarea{
-width:100%;min-height:100px;padding:12px;
-border-radius:12px;border:1px solid #ddd;font-size:16px
+width:100%;
+min-height:110px;
+padding:12px;
+border-radius:12px;
+border:1px solid #ddd;
+font-size:16px;
 }
 
 button{
-margin-top:10px;background:#1f7a5c;color:#fff;
-border:none;border-radius:10px;padding:10px 14px;font-size:15px
+margin-top:10px;
+background:#1f7a5c;
+color:#fff;
+border:none;
+border-radius:10px;
+padding:10px 14px;
+font-size:15px;
+cursor:pointer;
 }
 
 .card{
-background:#fff;border-radius:14px;padding:14px;margin-top:14px;
-box-shadow:0 2px 6px rgba(0,0,0,.05)
+background:#fff;
+border-radius:14px;
+padding:14px;
+margin-top:14px;
+box-shadow:0 2px 6px rgba(0,0,0,.05);
 }
 
 .title{font-weight:700;color:#1f7a5c;margin-bottom:6px}
 .issue{color:#c0392b;margin:3px 0}
 .good{color:#1f7a5c}
-.suggestion{background:#ecfdf5;padding:10px;border-radius:10px;margin-top:6px;font-style:italic}
+.suggestion{
+background:#ecfdf5;
+padding:10px;
+border-radius:10px;
+margin-top:6px;
+font-style:italic;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-<h1>🧠 Grammar Lab Expert</h1>
-<div class="sub">Syntactic grammar analyzer offline</div>
+<h1>🧠 Grammar Lab</h1>
+<div class="sub">Grammar analyzer + rewrite + meaning</div>
 </header>
 
 <div class="container">
 
-<textarea id="sentence" placeholder="Tempel kalimat Inggris..."></textarea>
-
-<script>
-document.getElementById("sentence").addEventListener("keydown", function(e){
-  if(e.key === "Enter" && !e.shiftKey){
-    e.preventDefault()
-    analyze()
-  }
-})
-</script>
+<textarea id="sentence" placeholder="Ketik atau tempel kalimat Inggris..."></textarea>
 <button onclick="analyze()">Analisis</button>
 
 <div id="syntax" class="card" style="display:none"></div>
 <div id="issues" class="card" style="display:none"></div>
-<div id="suggestion" class="card" style="display:none"></div>
+<div id="rewrite" class="card" style="display:none"></div>
 <div id="meaning" class="card" style="display:none"></div>
 
 </div>
 
 <script>
 
-// ===== BASIC LEXICON =====
-const infinitiveVerbs=["want","need","plan","decide","try","hope","learn","refuse"]
-const beForms=["am","is","are","was","were","be","been"]
-const modals=["can","could","may","might","must","should","will","would"]
-const pastMap={go:"went",eat:"ate",see:"saw",do:"did",make:"made"}
-
-// ===== TOKENIZE =====
-function tokenize(t){
-return t.toLowerCase().replace(/[.,!?]/g,"").split(/\s+/)
+// ===== UTIL =====
+function cap(s){
+return s.charAt(0).toUpperCase()+s.slice(1)
 }
 
-// ===== SUBJECT DETECT =====
-function detectSubject(tokens){
-const pronouns=["i","you","he","she","we","they"]
-for(let i=0;i<tokens.length;i++){
-if(pronouns.includes(tokens[i])) return tokens[i]
-}
-return tokens[0]||""
-}
-
-// ===== MAIN VERB DETECT =====
-function detectVerb(tokens){
-for(let t of tokens){
-if(infinitiveVerbs.includes(t)) return t
-if(Object.keys(pastMap).includes(t)) return t
-if(modals.includes(t)) return t
-}
-return tokens[1]||""
-}
-
-// ===== CLAUSE DETECT =====
-function detectClause(text){
-if(/\balthough|because|if|when|while\b/i.test(text))
-return "Subordinate clause"
-return "Simple clause"
+// ===== TRANSLATE =====
+async function translateToIndo(text){
+try{
+let r=await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q="+encodeURIComponent(text))
+let j=await r.json()
+return j[0].map(x=>x[0]).join("")
+}catch{return ""}
 }
 
 // ===== ANALYZE =====
@@ -109,92 +96,76 @@ function analyze(){
 let text=document.getElementById("sentence").value.trim()
 if(!text) return
 
-let tokens=tokenize(text)
 let lower=text.toLowerCase()
-
-let subject=detectSubject(tokens)
-let verb=detectVerb(tokens)
-let clause=detectClause(text)
-
-let syntaxBox=document.getElementById("syntax")
-syntaxBox.innerHTML=`
-<div class="title">Syntax</div>
-<div>Subject: ${subject||"-"}</div>
-<div>Main verb: ${verb||"-"}</div>
-<div>Clause type: ${clause}</div>
-`
-syntaxBox.style.display="block"
-
 let issues=[]
 let sug=text
 
 function add(msg){issues.push(msg)}
 
-// ===== NEED TO-INFINITIVE =====
-infinitiveVerbs.forEach(v=>{
-  let r=new RegExp(`\\b${v}\\s+([a-z]+)`)
-  let nounAfter=new RegExp(`\\b${v}\\s+(something|someone|anything|nothing|someone|somebody|a|an|the)\\b`)
+// ===== SUBJECT / VERB =====
+let tokens=lower.replace(/[.,!?]/g,"").split(/\s+/)
+let subject=tokens[0]||""
+let verb=tokens[1]||""
 
-  if(r.test(lower) &&
-     !new RegExp(`\\b${v}\\s+to\\s+`).test(lower) &&
-     !nounAfter.test(lower)
-  ){
-    add(`Verb complement: "${v}" harus diikuti to-infinitive`)
-    sug=sug.replace(new RegExp(`${v}\\s+([a-z]+)`,"i"),`${v} to $1`)
-  }
+// ===== SYNTAX =====
+let syntaxBox=document.getElementById("syntax")
+syntaxBox.innerHTML="<div class='title'>Syntax</div>"+
+"Subject: "+subject+"<br>Main verb: "+verb
+syntaxBox.style.display="block"
+
+// ===== INFINITIVE VERBS =====
+let infinitive=["want","need","plan","decide","try","hope","learn","refuse"]
+infinitive.forEach(v=>{
+let nounAfter=new RegExp("\\b"+v+"\\s+(something|someone|anything|nothing|a|an|the)\\b")
+let wrong=new RegExp("\\b"+v+"\\s+[a-z]+\\b")
+if(wrong.test(lower)&&!new RegExp("\\b"+v+"\\s+to\\s+").test(lower)&&!nounAfter.test(lower)){
+add('Verb complement: "'+v+'" harus diikuti to + verb')
+sug=sug.replace(new RegExp(v+"\\s+([a-z]+)","i"),v+" to $1")
+}
 })
 
-// ===== BE MISSING =====
-if(/\b(i|he|she|they|we)\s+(tired|hungry|happy|sad)\b/.test(lower)){
-add("Missing be-verb before adjective")
-sug=sug.replace(/\b(i|he|she|they|we)\s+(tired|hungry|happy|sad)\b/i,"$1 am $2")
+// ===== SOMETHING TO VERB =====
+if(/\b(something|anything|nothing|someone)\s+[a-z]+\b/.test(lower) &&
+!/\b(something|anything|nothing|someone)\s+to\s+[a-z]+\b/.test(lower)){
+add('Setelah something/someone perlu "to + verb"')
+sug=sug.replace(/\b(something|anything|nothing|someone)\s+([a-z]+)/i,"$1 to $2")
 }
 
-// ===== POLARITY =====
-if(/\banything\b/.test(lower) && !/\bnot|never|n't\b/.test(lower)){
-add("Polarity: anything dipakai di negatif/interogatif")
-sug=sug.replace(/anything/i,"something")
-}
-
-// ===== TENSE =====
-if(/\byesterday|ago|last\b/.test(lower)){
-for(let v in pastMap){
-if(new RegExp(`\\b${v}\\b`).test(lower)){
-add("Tense mismatch with past marker")
-sug=sug.replace(new RegExp(v,"i"),pastMap[v])
-}
-}
-}
-
-// ===== MODAL BASE FORM =====
+// ===== MODAL + ING =====
+let modals=["will","can","must","should","may","might","could","would"]
 modals.forEach(m=>{
-let r=new RegExp(`\\b${m}\\s+([a-z]+ing)`)
-if(r.test(lower)){
-add("Modal harus diikuti base verb (tanpa -ing)")
-sug=sug.replace(new RegExp(`${m}\\s+([a-z]+)ing`,"i"),`${m} $1`)
+if(new RegExp("\\b"+m+"\\s+[a-z]+ing\\b").test(lower)){
+add("Modal harus diikuti base verb")
+sug=sug.replace(new RegExp(m+"\\s+([a-z]+)ing","i"),m+" $1")
 }
 })
 
-// ===== FEEL COMPLEMENT =====
-if(/\bfeel\s+[a-z]+ing\b/.test(lower) && !/\bfeel\s+like\s+[a-z]+ing\b/.test(lower)){
-add('Verb complement: "feel" harus diikuti adjective atau "like + ing"')
+// ===== FEEL + ING =====
+if(/\bfeel\s+[a-z]+ing\b/.test(lower)&&!/\bfeel\s+like\s+[a-z]+ing\b/.test(lower)){
+add('Verb complement: feel harus "like + ing"')
 sug=sug.replace(/\bfeel\s+([a-z]+ing)/i,"feel like $1")
 }
 
-// ===== INDEFINITE PRONOUN + INFINITIVE =====
-if(/\b(something|anything|nothing|someone|somebody|anyone)\s+[a-z]+\b/.test(lower) &&
-   !/\b(something|anything|nothing|someone|somebody|anyone)\s+to\s+[a-z]+\b/.test(lower)){
-  add('Infinitive modifier: setelah "something/someone/anything" perlu "to + verb"')
-  sug=sug.replace(/\b(something|anything|nothing|someone|somebody|anyone)\s+([a-z]+)/i,"$1 to $2")
+// ===== FALL + ING =====
+if(/\bfell\s+[a-z]+ing\b/.test(lower)&&!/\bfell\s+(while|and)\s+[a-z]+ing\b/.test(lower)){
+add('Setelah "fell" biasanya perlu while/and sebelum -ing')
+sug=sug.replace(/\bfell\s+([a-z]+ing)/i,"fell while $1")
 }
 
-// ===== FALL + ING CLAUSE =====
-if(/\bfell\s+[a-z]+ing\b/.test(lower) && !/\bfell\s+(while|and)\s+[a-z]+ing\b/.test(lower)){
-  add('Clause connector: setelah "fell" biasanya perlu while/and sebelum -ing')
-  sug=sug.replace(/\bfell\s+([a-z]+ing)/i,"fell while $1")
+// ===== ANYTHING POLARITY =====
+if(/\banything\b/.test(lower)&&!/\bnot|never|n't\b/.test(lower)){
+add("Gunakan something dalam kalimat positif")
+sug=sug.replace(/anything/i,"something")
 }
 
-// ===== OUTPUT =====
+// ===== NEED SOMETHING TO EAT =====
+if(/\bneed\s+(something|anything|nothing|someone)\s+[a-z]+\b/.test(lower)&&
+!/\bneed\s+(something|anything|nothing|someone)\s+to\s+[a-z]+\b/.test(lower)){
+add("Setelah need + something perlu to")
+sug=sug.replace(/\bneed\s+(something|anything|nothing|someone)\s+([a-z]+)/i,"need $1 to $2")
+}
+
+// ===== ISSUES =====
 let issueBox=document.getElementById("issues")
 if(issues.length){
 issueBox.innerHTML="<div class='title'>Issues</div>"+issues.map(x=>"❌ "+x).join("<br>")
@@ -203,44 +174,37 @@ issueBox.innerHTML="<div class='title'>Issues</div><div class='good'>✔ Tidak a
 }
 issueBox.style.display="block"
 
-let sugBox=document.getElementById("suggestion")
+// ===== REWRITE + MEANING =====
+let rewriteBox=document.getElementById("rewrite")
 let meaningBox=document.getElementById("meaning")
 
-let sugBox=document.getElementById("suggestion")
-let meaningBox=document.getElementById("meaning")
+let finalSentence=(sug!==text)?sug:text
+finalSentence=cap(finalSentence)
+if(!/[.!?]$/.test(finalSentence)) finalSentence+="."
 
-let finalSentence = sug!==text ? sug : text
-
-// ===== REWRITE DISPLAY =====
 if(sug!==text){
-  sug= sug.charAt(0).toUpperCase()+sug.slice(1)
-  if(!/[.!?]$/.test(sug)) sug+="."
-  sugBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+sug+"</div>"
-  sugBox.style.display="block"
+rewriteBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+finalSentence+"</div>"
+rewriteBox.style.display="block"
 }else{
-  sugBox.style.display="none"
+rewriteBox.style.display="none"
 }
 
-// ===== MEANING ALWAYS =====
 translateToIndo(finalSentence).then(m=>{
-  if(m){
-    meaningBox.innerHTML="<div class='title'>Meaning</div><div class='suggestion'>"+m+"</div>"
-    meaningBox.style.display="block"
-  }
+if(m){
+meaningBox.innerHTML="<div class='title'>Meaning</div><div class='suggestion'>"+m+"</div>"
+meaningBox.style.display="block"
+}
 })
 
 }
-async function translateToIndo(text){
-  try{
-    let r = await fetch(
-      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q="+encodeURIComponent(text)
-    )
-    let j = await r.json()
-    return j[0].map(x=>x[0]).join("")
-  }catch{
-    return ""
-  }
+
+// ===== ENTER = ANALYZE =====
+document.getElementById("sentence").addEventListener("keydown",function(e){
+if(e.key==="Enter"&&!e.shiftKey){
+e.preventDefault()
+analyze()
 }
+})
 
 </script>
 </body>
