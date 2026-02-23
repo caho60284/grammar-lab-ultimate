@@ -206,25 +206,28 @@ issueBox.style.display="block"
 let sugBox=document.getElementById("suggestion")
 let meaningBox=document.getElementById("meaning")
 
-if(sug!==text){
-  sug=sug.charAt(0).toUpperCase()+sug.slice(1)
-  if(!/[.!?]$/.test(sug)) sug+="."
+let sugBox=document.getElementById("suggestion")
+let meaningBox=document.getElementById("meaning")
 
+let finalSentence = sug!==text ? sug : text
+
+// ===== REWRITE DISPLAY =====
+if(sug!==text){
+  sug= sug.charAt(0).toUpperCase()+sug.slice(1)
+  if(!/[.!?]$/.test(sug)) sug+="."
   sugBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+sug+"</div>"
   sugBox.style.display="block"
-
-  // 🔽 TERJEMAHAN
-  translateToIndo(sug).then(m=>{
-    if(m){
-      meaningBox.innerHTML="<div class='title'>Meaning</div><div class='suggestion'>"+m+"</div>"
-      meaningBox.style.display="block"
-    }
-  })
-
 }else{
   sugBox.style.display="none"
-  meaningBox.style.display="none"
 }
+
+// ===== MEANING ALWAYS =====
+translateToIndo(finalSentence).then(m=>{
+  if(m){
+    meaningBox.innerHTML="<div class='title'>Meaning</div><div class='suggestion'>"+m+"</div>"
+    meaningBox.style.display="block"
+  }
+})
 
 }
 async function translateToIndo(text){
