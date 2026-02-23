@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grammar Lab</title>
+<title>Grammar Lab AI</title>
 
 <style>
 body{
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
-background:#f4f6f5;
+background:#f3f6f4;
 margin:0;
 padding:20px;
 color:#1f2d2a;
@@ -16,12 +16,12 @@ color:#1f2d2a;
 
 h1{
 color:#2f6f5e;
-margin-bottom:5px;
+margin-bottom:4px;
 }
 
 .subtitle{
 color:#6b7c76;
-margin-bottom:20px;
+margin-bottom:18px;
 }
 
 textarea{
@@ -65,19 +65,17 @@ color:#2f8f5e;
 font-weight:600;
 }
 
+.warn{
+color:#d97706;
+font-weight:600;
+}
+
 .err{
 color:#c0392b;
 font-weight:600;
 }
 
-.rewrite{
-background:#e6f2ee;
-padding:10px;
-border-radius:10px;
-font-style:italic;
-}
-
-.meaning{
+.box{
 background:#e6f2ee;
 padding:10px;
 border-radius:10px;
@@ -88,8 +86,8 @@ font-style:italic;
 
 <body>
 
-<h1>🧠 Grammar Lab</h1>
-<div class="subtitle">Grammar analyzer + natural rewrite + meaning</div>
+<h1>🧠 Grammar Lab AI</h1>
+<div class="subtitle">Flexible grammar + natural rewrite + meaning</div>
 
 <textarea id="input" placeholder="Type sentence..."></textarea>
 <br>
@@ -116,167 +114,136 @@ analyze()
 }
 })
 
-// =========================
-// NATURAL RULES
-// =========================
-const naturalRules = [
-{
-pattern:/\bfeel\s+\w+ing\b/i,
-message:"Gunakan feel like + -ing",
-fix:s=>s.replace(/feel\s+(\w+ing)/i,"feel like $1")
-},
-{
-pattern:/\bdiscuss about\b/i,
-message:"discuss tidak pakai about",
-fix:s=>s.replace(/discuss about/i,"discuss")
-},
-{
-pattern:/\bdo a mistake\b/i,
-message:"Gunakan make a mistake",
-fix:s=>s.replace(/do a mistake/i,"make a mistake")
-},
-{
-pattern:/\bvery hungry\b/i,
-message:"Lebih natural: really hungry",
-fix:s=>s.replace(/very hungry/i,"really hungry")
-},
-{
-pattern:/\beat medicine\b/i,
-message:"Lebih natural: take medicine",
-fix:s=>s.replace(/eat medicine/i,"take medicine")
-}
-]
+// =======================
+// AI-LIKE HEURISTIC ENGINE
+// =======================
+function heuristicRewrite(s){
 
-// =========================
-// GRAMMAR RULES
-// =========================
-function grammarCheck(s){
+let out = s
+
+// modal + ing → base
+out = out.replace(/\b(will|can|must|should)\s+(\w+)ing\b/i,"$1 $2")
+
+// feel + ing → feel like ing
+out = out.replace(/\bfeel\s+(\w+ing)\b/i,"feel like $1")
+
+// need + verb → need to verb
+out = out.replace(/\bneed\s+(\w+)\b/i,"need to $1")
+
+// very + adj → really + adj
+out = out.replace(/\bvery\s+(\w+)\b/i,"really $1")
+
+// I am → I'm
+out = out.replace(/\bI am\b/,"I'm")
+
+// do not → don't
+out = out.replace(/\bdo not\b/,"don't")
+
+return out
+}
+
+// =======================
+// NATURAL SCORE
+// =======================
+function detectIssues(original,rewritten){
+
 let issues=[]
-let rewrite=s
 
-// need + to
-if(/\bneed\s+\w+\s+eat\b/i.test(s)){
-issues.push('Verb complement: need + something to eat')
-rewrite="I need something to eat"
+if(original!==rewritten){
+
+if(/\bvery\s+\w+\b/i.test(original))
+issues.push("Less natural intensifier: use really")
+
+if(/\bfeel\s+\w+ing\b/i.test(original))
+issues.push("Use feel like + -ing")
+
+if(/\bneed\s+\w+\b/i.test(original) && !/\bneed to\b/i.test(original))
+issues.push("need + verb → need to + verb")
+
+if(/\b(will|can|must|should)\s+\w+ing\b/i.test(original))
+issues.push("Modal must use base verb")
 }
 
-// modal + ing
-if(/\b(will|can|must|should)\s+\w+ing\b/i.test(s)){
-issues.push("Modal harus diikuti base verb")
-rewrite=s.replace(/\b(will|can|must|should)\s+(\w+)ing\b/i,"$1 $2")
+return issues
 }
 
-// feel crying
-if(/\bfeel\s+crying\b/i.test(s)){
-issues.push("feel harus like + ing")
-rewrite=s.replace(/feel\s+crying/i,"feel like crying")
-}
-
-// fall crying
-if(/\bfell\s+crying\b/i.test(s)){
-issues.push("fell biasanya while + ing")
-rewrite=s.replace(/fell\s+crying/i,"fell while crying")
-}
-
-return {issues,rewrite}
-}
-
-// =========================
-// NATURAL CHECK
-// =========================
-function naturalCheck(s){
-for(const r of naturalRules){
-if(r.pattern.test(s)){
+// =======================
+// SYNTAX SIMPLE
+// =======================
+function syntaxDetect(s){
+let w = s.split(" ")
 return {
-issue:r.message,
-rewrite:r.fix(s)
+subject:w[0]||"",
+verb:w[1]||""
 }
-}
-}
-return null
 }
 
-// =========================
-// MEANING
-// =========================
-function translate(s){
+// =======================
+// MEANING HEURISTIC
+// =======================
+function meaningGuess(s){
 
-// simple dictionary
-if(/need something to eat/i.test(s))
-return "Aku butuh sesuatu untuk dimakan."
+// I'm hungry / thirsty / tired etc
+if(/\bI'm really (\w+)\b/i.test(s)){
+let adj = s.match(/\bI'm really (\w+)\b/i)[1]
+return "Aku sangat "+adj
+}
 
+// feel like crying
 if(/feel like crying/i.test(s))
-return "Aku merasa ingin menangis."
+return "Aku merasa ingin menangis"
 
-if(/fell while crying/i.test(s))
-return "Aku terjatuh sambil menangis."
-
-if(/really hungry/i.test(s))
-return "Aku sangat lapar."
+// need to eat
+if(/need to eat/i.test(s))
+return "Aku perlu makan"
 
 // fallback
-return "Terjemahan otomatis belum tersedia."
+return "Makna umum: "+s
 }
 
-// =========================
+// =======================
 // ANALYZE
-// =========================
+// =======================
 function analyze(){
 
 let text = input.value.trim()
 if(!text) return
 
-// reset
+let rewritten = heuristicRewrite(text)
+let issues = detectIssues(text,rewritten)
+let syn = syntaxDetect(text)
+let meaning = meaningGuess(rewritten)
+
+// show
 syntaxBox.style.display="block"
 issuesBox.style.display="block"
 rewriteBox.style.display="block"
 meaningBox.style.display="block"
 
-let grammar = grammarCheck(text)
-let nat = naturalCheck(text)
-
-let finalRewrite = text
-let issues=[]
-
-// grammar issues
-if(grammar.issues.length){
-issues.push(...grammar.issues)
-finalRewrite = grammar.rewrite
-}
-
-// natural issues
-if(nat){
-issues.push("Kurang natural: "+nat.issue)
-finalRewrite = nat.rewrite
-}
-
 // syntax
-let subject = text.split(" ")[0]
-let verb = text.split(" ")[1] || ""
-
 syntaxBox.innerHTML = `
 <h3>Syntax</h3>
-Subject: ${subject}<br>
-Main verb: ${verb}
+Subject: ${syn.subject}<br>
+Main verb: ${syn.verb}
 `
 
 // issues
 if(issues.length){
-issuesBox.innerHTML = `<h3>Issues</h3><div class="err">❌ ${issues.join("<br>❌ ")}</div>`
+issuesBox.innerHTML = `<h3>Issues</h3><div class="warn">⚠ ${issues.join("<br>⚠ ")}</div>`
 }else{
-issuesBox.innerHTML = `<h3>Issues</h3><div class="ok">✔ Tidak ada masalah utama</div>`
+issuesBox.innerHTML = `<h3>Issues</h3><div class="ok">✔ Natural & correct</div>`
 }
 
 // rewrite
 rewriteBox.innerHTML = `
 <h3>Rewrite</h3>
-<div class="rewrite">${finalRewrite}</div>
+<div class="box">${rewritten}</div>
 `
 
 // meaning
 meaningBox.innerHTML = `
 <h3>Meaning</h3>
-<div class="meaning">${translate(finalRewrite)}</div>
+<div class="box">${meaning}</div>
 `
 }
 
