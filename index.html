@@ -7,33 +7,21 @@
 
 <style>
 body{
-font-family:system-ui,-apple-system,Segoe UI,Roboto;
+font-family:system-ui;
 background:#f4f7f6;
-margin:0;
-padding:20px;
+padding:18px;
 color:#1f3d35;
 }
-
-h1{
-font-size:28px;
-margin-bottom:4px;
-}
-
-.subtitle{
-color:#6b7f78;
-margin-bottom:20px;
-}
-
+h1{margin-bottom:6px}
+.subtitle{color:#6b7f78;margin-bottom:18px}
 textarea{
 width:100%;
 border-radius:14px;
 border:1px solid #ccd7d3;
-padding:16px;
+padding:14px;
 font-size:18px;
-box-sizing:border-box;
 min-height:110px;
 }
-
 button{
 width:100%;
 margin-top:14px;
@@ -43,39 +31,24 @@ border-radius:14px;
 background:#3f6f60;
 color:white;
 font-size:18px;
-cursor:pointer;
 }
-
 .card{
 background:white;
-border-radius:16px;
-padding:16px;
-margin-top:18px;
+border-radius:14px;
+padding:14px;
+margin-top:14px;
 box-shadow:0 2px 6px rgba(0,0,0,0.06);
 }
-
-table{
-width:100%;
-border-collapse:collapse;
-}
-
-th,td{
-padding:10px;
-border-bottom:1px solid #e6eeea;
-text-align:left;
-}
-
-th{
-color:#4a6b61;
-}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #e6eeea}
 </style>
 </head>
 <body>
 
 <h1>🧠 English Grammar AI Analyzer</h1>
-<div class="subtitle">Analisis struktur + naturalitas + arti otomatis</div>
+<div class="subtitle">Analisis struktur + naturalitas + arti</div>
 
-<textarea id="input" placeholder="Tulis kalimat Inggris..."></textarea>
+<textarea id="input">I go to school</textarea>
 <button onclick="analyze()">Analyze</button>
 
 <div id="result"></div>
@@ -88,48 +61,19 @@ if(!text)return
 
 document.getElementById("result").innerHTML="Menganalisis..."
 
-const prompt=`
-Analisis kalimat bahasa Inggris berikut secara linguistik.
-
-Kalimat: "${text}"
-
-Balas HANYA JSON valid dengan format:
-{
-"segments":[
-{"text":"","role":"","type":"","explanation":""}
-],
-"natural":"natural / kurang natural / salah",
-"rewrite":"",
-"meaning":"",
-"idiom":""
-}
-`
-
 try{
 
-const res=await fetch("https://api.openai.com/v1/chat/completions",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer YOUR_API_KEY"
-},
-body:JSON.stringify({
-model:"gpt-4o-mini",
-messages:[{role:"user",content:prompt}],
-temperature:0.2
-})
-})
+const res=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(
+"https://grammar-ai-proxy.vercel.app/analyze?text="+encodeURIComponent(text)
+))
 
-const data=await res.json()
-const content=data.choices[0].message.content
-const json=JSON.parse(content)
+const j=await res.json()
 
-render(json)
+render(j)
 
 }catch(e){
-document.getElementById("result").innerHTML="Error AI"
+document.getElementById("result").innerHTML="❌ AI tidak bisa diakses"
 }
-
 }
 
 function render(j){
@@ -150,17 +94,14 @@ html+=`<tr>
 html+=`</table></div>`
 
 html+=`<div class="card"><b>Naturalitas:</b> ${j.natural}</div>`
+html+=`<div class="card"><b>Meaning:</b> ${j.meaning}</div>`
 
 if(j.rewrite){
 html+=`<div class="card"><b>Rewrite:</b> ${j.rewrite}</div>`
 }
 
-if(j.meaning){
-html+=`<div class="card"><b>Meaning:</b> ${j.meaning}</div>`
-}
-
 if(j.idiom){
-html+=`<div class="card"><b>Idiom/Phrase:</b> ${j.idiom}</div>`
+html+=`<div class="card"><b>Idiom:</b> ${j.idiom}</div>`
 }
 
 document.getElementById("result").innerHTML=html
