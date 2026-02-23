@@ -175,6 +175,12 @@ add('Verb complement: "feel" harus diikuti adjective atau "like + ing"')
 sug=sug.replace(/\bfeel\s+([a-z]+ing)/i,"feel like $1")
 }
 
+// ===== FALL + ING CLAUSE =====
+if(/\bfell\s+[a-z]+ing\b/.test(lower) && !/\bfell\s+(while|and)\s+[a-z]+ing\b/.test(lower)){
+  add('Clause connector: setelah "fell" biasanya perlu while/and sebelum -ing')
+  sug=sug.replace(/\bfell\s+([a-z]+ing)/i,"fell while $1")
+}
+
 // ===== OUTPUT =====
 let issueBox=document.getElementById("issues")
 if(issues.length){
