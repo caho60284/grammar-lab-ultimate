@@ -2,191 +2,168 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>English Grammar Structure Analyzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Grammar AI Analyzer</title>
 
 <style>
 body{
 font-family:system-ui,-apple-system,Segoe UI,Roboto;
 background:#f4f7f6;
 margin:0;
-padding:16px;
-color:#1f2d2a;
+padding:20px;
+color:#1f3d35;
 }
 
 h1{
-color:#2f6f5e;
-margin-bottom:6px;
+font-size:28px;
+margin-bottom:4px;
 }
 
 .subtitle{
-color:#6b7c78;
-margin-bottom:18px;
+color:#6b7f78;
+margin-bottom:20px;
 }
 
 textarea{
 width:100%;
-min-height:110px;
 border-radius:14px;
-border:1px solid #cfd8d5;
-padding:14px;
+border:1px solid #ccd7d3;
+padding:16px;
 font-size:18px;
 box-sizing:border-box;
+min-height:110px;
 }
 
 button{
 width:100%;
 margin-top:14px;
-background:#3f6f5f;
-color:white;
+padding:16px;
 border:none;
-padding:14px;
 border-radius:14px;
+background:#3f6f60;
+color:white;
 font-size:18px;
+cursor:pointer;
 }
 
 .card{
 background:white;
 border-radius:16px;
-padding:14px;
-margin-top:16px;
-box-shadow:0 4px 10px rgba(0,0,0,.05);
+padding:16px;
+margin-top:18px;
+box-shadow:0 2px 6px rgba(0,0,0,0.06);
 }
 
 table{
 width:100%;
 border-collapse:collapse;
-font-size:15px;
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #e6eeea;
+text-align:left;
 }
 
 th{
-text-align:left;
-background:#e6efec;
-padding:10px;
-color:#2f6f5e;
-}
-
-td{
-padding:10px;
-border-top:1px solid #e6efec;
-vertical-align:top;
-}
-
-.meaning{
-background:#e8f0ed;
-padding:12px;
-border-radius:10px;
-margin-top:8px;
+color:#4a6b61;
 }
 </style>
 </head>
-
 <body>
 
-<h1>English Grammar Structure Analyzer</h1>
-<div class="subtitle">Analisis struktur kalimat Inggris lengkap</div>
+<h1>🧠 English Grammar AI Analyzer</h1>
+<div class="subtitle">Analisis struktur + naturalitas + arti otomatis</div>
 
-<textarea id="input" placeholder="Ketik kalimat Inggris..."></textarea>
+<textarea id="input" placeholder="Tulis kalimat Inggris..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
 <div id="result"></div>
 
 <script>
-function analyze(){
-let text=document.getElementById("input").value.trim();
-if(!text) return;
+async function analyze(){
 
-let words=text.replace(/[.,!?]/g,"").split(/\s+/);
-let rows=[];
-let meaning="";
-let idiom="—";
+const text=document.getElementById("input").value.trim()
+if(!text)return
 
-// ===== DETEKSI TIPE KALIMAT =====
-let lower=text.toLowerCase();
+document.getElementById("result").innerHTML="Menganalisis..."
 
-// Imperative: Let me / Let us
-if(lower.startsWith("let ")){
-rows.push(["Let","Predikat","Verb (imperatif)","Kata kerja perintah / izin"]);
-rows.push(["me","Objek","Kata ganti objek","Orang yang menerima aksi"]);
-rows.push([words.slice(2).join(" "),"Frasa verba","Verb phrase","Tindakan yang dilakukan"]);
+const prompt=`
+Analisis kalimat bahasa Inggris berikut secara linguistik.
 
-meaning="Biarkan saya " + words.slice(2).join(" ");
+Kalimat: "${text}"
+
+Balas HANYA JSON valid dengan format:
+{
+"segments":[
+{"text":"","role":"","type":"","explanation":""}
+],
+"natural":"natural / kurang natural / salah",
+"rewrite":"",
+"meaning":"",
+"idiom":""
+}
+`
+
+try{
+
+const res=await fetch("https://api.openai.com/v1/chat/completions",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer YOUR_API_KEY"
+},
+body:JSON.stringify({
+model:"gpt-4o-mini",
+messages:[{role:"user",content:prompt}],
+temperature:0.2
+})
+})
+
+const data=await res.json()
+const content=data.choices[0].message.content
+const json=JSON.parse(content)
+
+render(json)
+
+}catch(e){
+document.getElementById("result").innerHTML="Error AI"
 }
 
-// Subject + be + adjective
-else if(words.length>=3 && ["am","is","are","was","were"].includes(words[1].toLowerCase())){
-rows.push([words[0],"Subjek","Kata ganti / noun","Pelaku kalimat"]);
-rows.push([words[1],"Predikat","Linking verb","Penghubung subjek dan sifat"]);
-rows.push([words.slice(2).join(" "),"Pelengkap","Adjective phrase","Sifat / keadaan subjek"]);
-
-meaning=translateSimple(words[0])+" "+translateAdj(words.slice(2).join(" "));
 }
 
-// Modal clause
-else if(words.includes("could")||words.includes("can")||words.includes("will")||words.includes("should")){
-let idx=words.findIndex(w=>["could","can","will","should"].includes(w));
-rows.push([words.slice(0,idx).join(" "),"Klausa utama","Main clause","Bagian utama kalimat"]);
-rows.push([words.slice(idx).join(" "),"Klausa modal","Modal clause","Kemampuan / kemungkinan"]);
+function render(j){
 
-meaning="(makna tergantung konteks)";
-}
-
-// Simple SVO
-else if(words.length>=2){
-rows.push([words[0],"Subjek","Noun / pronoun","Pelaku"]);
-rows.push([words[1],"Predikat","Verb","Tindakan"]);
-if(words.length>2){
-rows.push([words.slice(2).join(" "),"Objek / pelengkap","Object phrase","Yang dikenai tindakan"]);
-}
-meaning="(terjemahan sederhana)";
-}
-
-// Idiom sederhana
-if(lower.includes("make it")){
-idiom="make it = berhasil / bisa datang / tercapai";
-}
-
-// ===== RENDER =====
 let html=`<div class="card">
 <table>
-<tr><th>Bagian</th><th>Peran</th><th>Jenis</th><th>Penjelasan</th></tr>`;
-rows.forEach(r=>{
-html+=`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
-});
-html+=`</table></div>`;
+<tr><th>Bagian</th><th>Peran</th><th>Jenis</th><th>Penjelasan</th></tr>`
 
-html+=`<div class="card"><b>Meaning kalimat</b>
-<div class="meaning">${meaning}</div></div>`;
+j.segments.forEach(s=>{
+html+=`<tr>
+<td>${s.text}</td>
+<td>${s.role}</td>
+<td>${s.type}</td>
+<td>${s.explanation}</td>
+</tr>`
+})
 
-html+=`<div class="card"><b>Idiom / Phrase</b>
-<div class="meaning">${idiom}</div></div>`;
+html+=`</table></div>`
 
-document.getElementById("result").innerHTML=html;
+html+=`<div class="card"><b>Naturalitas:</b> ${j.natural}</div>`
+
+if(j.rewrite){
+html+=`<div class="card"><b>Rewrite:</b> ${j.rewrite}</div>`
 }
 
-// ===== TERJEMAHAN SEDERHANA =====
-function translateSimple(w){
-let m={
-"i":"aku",
-"you":"kamu",
-"he":"dia",
-"she":"dia",
-"they":"mereka",
-"we":"kami"
-};
-return m[w.toLowerCase()]||w;
+if(j.meaning){
+html+=`<div class="card"><b>Meaning:</b> ${j.meaning}</div>`
 }
 
-function translateAdj(adj){
-let m={
-"happy":"senang",
-"sad":"sedih",
-"hungry":"lapar",
-"sleepy":"mengantuk",
-"thirsty":"haus",
-"angry":"marah"
-};
-return m[adj.toLowerCase()]||adj;
+if(j.idiom){
+html+=`<div class="card"><b>Idiom/Phrase:</b> ${j.idiom}</div>`
+}
+
+document.getElementById("result").innerHTML=html
 }
 </script>
 
