@@ -46,6 +46,15 @@ box-shadow:0 2px 6px rgba(0,0,0,.05)
 <div class="container">
 
 <textarea id="sentence" placeholder="Tempel kalimat Inggris..."></textarea>
+
+<script>
+document.getElementById("sentence").addEventListener("keydown", function(e){
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault()
+    analyze()
+  }
+})
+</script>
 <button onclick="analyze()">Analisis</button>
 
 <div id="syntax" class="card" style="display:none"></div>
