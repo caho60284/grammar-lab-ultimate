@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,192 +7,270 @@
 
 <style>
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-background:#f4f6f8;
+font-family:system-ui,-apple-system,Segoe UI,Roboto;
+background:#f4f6f5;
 margin:0;
-padding:18px;
+padding:16px;
+color:#1f2933;
 }
 
-.container{max-width:900px;margin:auto;}
+h1{
+color:#3b6f5c;
+margin-bottom:4px;
+}
 
-h1{color:#2f6f5e;font-size:26px;margin-bottom:14px}
+.subtitle{
+color:#6b7c75;
+margin-bottom:18px;
+}
 
 textarea{
 width:100%;
-padding:16px;
 border-radius:14px;
-border:1px solid #d6dde2;
+border:1px solid #cfd8d3;
+padding:14px;
 font-size:18px;
 min-height:120px;
 box-sizing:border-box;
 }
 
 button{
+width:100%;
 margin-top:14px;
 padding:14px;
 border:none;
-border-radius:14px;
-background:#2f6f5e;
+border-radius:16px;
+background:#3b6f5c;
 color:white;
 font-size:18px;
-width:100%;
 }
 
 .card{
-margin-top:16px;
 background:white;
 border-radius:16px;
 padding:14px;
-box-shadow:0 3px 10px rgba(0,0,0,0.06);
+margin-top:16px;
+box-shadow:0 2px 6px rgba(0,0,0,0.06);
 }
 
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #eef2f4;text-align:left}
-th{background:#eef3f1;color:#2f6f5e}
+table{
+width:100%;
+border-collapse:collapse;
+font-size:15px;
+}
 
-.meaning{background:#eef6f3;padding:10px;border-radius:10px}
+th{
+text-align:left;
+background:#e8efec;
+padding:10px;
+}
+
+td{
+padding:10px;
+border-top:1px solid #edf1ef;
+vertical-align:top;
+}
+
+.meaning{
+background:#e3ece8;
+padding:12px;
+border-radius:12px;
+margin-top:6px;
+}
+
+.idiom{
+background:#eef3f0;
+padding:12px;
+border-radius:12px;
+margin-top:6px;
+}
+
 </style>
 </head>
-
 <body>
-<div class="container">
 
 <h1>English Grammar Structure Analyzer</h1>
+<div class="subtitle">Analisis struktur kalimat Inggris lengkap</div>
 
-<textarea id="input" placeholder="Tulis kalimat Inggris..."></textarea>
+<textarea id="inputText" placeholder="Ketik kalimat Inggris..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
+<div id="result"></div>
+
+<script>
+
+// =========================
+// DICTIONARY
+// =========================
+const pronouns = ["i","you","he","she","we","they","it"]
+const beVerbs = ["am","is","are","was","were"]
+const modals = ["can","could","will","would","shall","should","may","might","must"]
+const adjectives = ["happy","sad","hungry","thirsty","sleepy","tired","late","ready"]
+const intensifiers = ["very","so","really","too"]
+
+// translation dictionary
+const dict = {
+"i":"aku",
+"you":"kamu",
+"he":"dia",
+"she":"dia",
+"we":"kami",
+"they":"mereka",
+"am":"",
+"is":"",
+"are":"",
+"so":"sangat",
+"very":"sangat",
+"really":"sangat",
+"too":"terlalu",
+"happy":"senang",
+"sad":"sedih",
+"hungry":"lapar",
+"thirsty":"haus",
+"sleepy":"mengantuk",
+"tired":"lelah",
+"could":"bisa",
+"can":"bisa",
+"will":"akan",
+"make":"membuat",
+"it":"itu",
+"come":"datang"
+}
+
+// idiom dictionary
+const idioms = {
+"make it":"berhasil / bisa datang",
+"come on":"ayo",
+"give up":"menyerah",
+"look for":"mencari"
+}
+
+// =========================
+// ANALYZE
+// =========================
+function analyze(){
+
+let text = document.getElementById("inputText").value.trim()
+if(!text) return
+
+let clean = text.replace(/’/g,"'")
+let words = clean.toLowerCase().split(" ")
+
+let rows = []
+
+// SUBJECT
+if(pronouns.includes(words[0])){
+rows.push({
+seg:words[0],
+role:"Subjek utama",
+type:"Kata ganti",
+exp:"Pelaku utama dalam kalimat"
+})
+}
+
+// BE VERB
+if(beVerbs.includes(words[1])){
+rows.push({
+seg:words[1],
+role:"Kata kerja utama",
+type:"Be verb",
+exp:"Predikat penghubung subjek dengan sifat"
+})
+}
+
+// ADJECTIVE PHRASE
+let adjIndex = words.findIndex(w=>adjectives.includes(w))
+if(adjIndex>-1){
+let start = adjIndex-1>=0 && intensifiers.includes(words[adjIndex-1])
+? adjIndex-1 : adjIndex
+
+let phrase = words.slice(start,adjIndex+1).join(" ")
+rows.push({
+seg:phrase,
+role:"Pelengkap",
+type:"Adjective phrase",
+exp:"Menjelaskan keadaan atau sifat subjek"
+})
+}
+
+// MODAL CLAUSE
+let modalIndex = words.findIndex(w=>modals.includes(w))
+if(modalIndex>-1){
+let clause = words.slice(modalIndex).join(" ")
+rows.push({
+seg:clause,
+role:"Klausa bawahan",
+type:"Subordinate clause",
+exp:"Informasi tambahan tentang situasi"
+})
+}
+
+// =========================
+// MEANING
+// =========================
+let normalized = clean
+.replace(/I'm/gi,"I am")
+.toLowerCase()
+
+let translated = normalized.split(" ").map(w=>{
+if(dict[w]) return dict[w]
+return w
+}).join(" ")
+
+
+// =========================
+// IDIOM
+// =========================
+let idiomFound = ""
+for(let key in idioms){
+if(normalized.includes(key)){
+idiomFound = key+" = "+idioms[key]
+}
+}
+
+// =========================
+// RENDER
+// =========================
+let html = `
 <div class="card">
 <table>
-<thead>
 <tr>
 <th>Bagian</th>
 <th>Peran</th>
 <th>Jenis</th>
 <th>Penjelasan</th>
 </tr>
-</thead>
-<tbody id="out"></tbody>
-</table>
-</div>
+`
 
+rows.forEach(r=>{
+html+=`
+<tr>
+<td>${r.seg}</td>
+<td>${r.role}</td>
+<td>${r.type}</td>
+<td>${r.exp}</td>
+</tr>`
+})
+
+html+=`</table></div>`
+
+html+=`
 <div class="card">
 <b>Meaning kalimat</b>
-<div id="meaning" class="meaning">-</div>
+<div class="meaning">${translated}</div>
 </div>
+`
 
+if(idiomFound){
+html+=`
 <div class="card">
 <b>Idiom / Phrase</b>
-<div id="idiom" class="meaning">-</div>
+<div class="idiom">${idiomFound}</div>
 </div>
-
-</div>
-
-<script>
-
-function analyze(){
-
-const text=document.getElementById("input").value.trim()
-const out=document.getElementById("out")
-const meaningBox=document.getElementById("meaning")
-const idiomBox=document.getElementById("idiom")
-
-out.innerHTML=""
-meaningBox.innerHTML="-"
-idiomBox.innerHTML="-"
-
-if(!text)return
-
-const norm=text
-.replace(/’/g,"'")
-.replace(/I'm/gi,"I am")
-.toLowerCase()
-
-const words=norm.split(/\s+/)
-
-const be=["am","is","are","was","were"]
-const modals=["can","could","will","would","should","may","might","must"]
-
-let subject=null
-let verb=null
-let complement=null
-let clause=null
-
-// SUBJECT
-if(words.includes("i"))subject="I"
-
-// VERB
-for(let w of words){
-if(be.includes(w)||modals.includes(w)){
-verb=w
-break
-}
+`
 }
 
-// COMPLEMENT
-if(verb && be.includes(verb)){
-let idx=words.indexOf(verb)
-complement=words.slice(idx+1).join(" ")
-}
-
-// CLAUSE (modal in complement)
-if(complement){
-let parts=complement.split(" ")
-for(let i=0;i<parts.length;i++){
-if(modals.includes(parts[i])){
-clause=parts.slice(i).join(" ")
-complement=parts.slice(0,i).join(" ")
-break
-}
-}
-}
-
-// OUTPUT ROW
-function row(a,b,c,d){
-out.innerHTML+=`<tr>
-<td>${a}</td>
-<td>${b}</td>
-<td>${c}</td>
-<td>${d}</td>
-</tr>`
-}
-
-if(subject)row("I","Subjek utama","Kata ganti","Pelaku utama kalimat")
-if(verb)row(verb,"Kata kerja utama","Verb","Predikat utama")
-if(complement)row(complement,"Pelengkap","Adjective phrase","Menjelaskan subjek")
-if(clause)row(clause,"Klausa bawahan","Subordinate clause","Informasi tambahan")
-
-// =====================
-// MEANING ENGINE
-// =====================
-let meaning=text
-
-meaning=meaning
-.replace(/I am/gi,"Aku")
-.replace(/I'm/gi,"Aku")
-.replace(/so happy/gi,"sangat senang")
-.replace(/could/gi,"bisa")
-.replace(/make it/gi,"datang")
-.replace(/very/gi,"sangat")
-
-meaningBox.innerHTML=meaning
-
-// =====================
-// IDIOM ENGINE
-// =====================
-let idioms={
-"make it":"berhasil / bisa datang",
-"give up":"menyerah",
-"take off":"lepas landas",
-"look for":"mencari"
-}
-
-for(let k in idioms){
-if(norm.includes(k)){
-idiomBox.innerHTML=k+" = "+idioms[k]
-break
-}
-}
+document.getElementById("result").innerHTML = html
 
 }
 
