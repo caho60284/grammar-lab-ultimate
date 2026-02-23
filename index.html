@@ -130,13 +130,18 @@ let sug=text
 
 function add(msg){issues.push(msg)}
 
-// ===== INFINITIVE COMPLEMENT =====
+// ===== NEED TO-INFINITIVE =====
 infinitiveVerbs.forEach(v=>{
-let r=new RegExp(`\\b${v}\\s+[a-z]+`)
-if(r.test(lower) && !new RegExp(`\\b${v}\\s+to\\s+`).test(lower)){
-add(`Verb complement: "${v}" harus diikuti to-infinitive`)
-sug=sug.replace(new RegExp(`${v}\\s+([a-z]+)`,"i"),`${v} to $1`)
-}
+  let r=new RegExp(`\\b${v}\\s+([a-z]+)`)
+  let nounAfter=new RegExp(`\\b${v}\\s+(something|someone|anything|nothing|someone|somebody|a|an|the)\\b`)
+
+  if(r.test(lower) &&
+     !new RegExp(`\\b${v}\\s+to\\s+`).test(lower) &&
+     !nounAfter.test(lower)
+  ){
+    add(`Verb complement: "${v}" harus diikuti to-infinitive`)
+    sug=sug.replace(new RegExp(`${v}\\s+([a-z]+)`,"i"),`${v} to $1`)
+  }
 })
 
 // ===== BE MISSING =====
