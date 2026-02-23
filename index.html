@@ -60,6 +60,7 @@ document.getElementById("sentence").addEventListener("keydown", function(e){
 <div id="syntax" class="card" style="display:none"></div>
 <div id="issues" class="card" style="display:none"></div>
 <div id="suggestion" class="card" style="display:none"></div>
+<div id="meaning" class="card" style="display:none"></div>
 
 </div>
 
@@ -191,15 +192,39 @@ issueBox.innerHTML="<div class='title'>Issues</div><div class='good'>✔ Tidak a
 issueBox.style.display="block"
 
 let sugBox=document.getElementById("suggestion")
+let meaningBox=document.getElementById("meaning")
+
 if(sug!==text){
-sug=sug.charAt(0).toUpperCase()+sug.slice(1)
-if(!/[.!?]$/.test(sug)) sug+="."
-sugBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+sug+"</div>"
-sugBox.style.display="block"
+  sug=sug.charAt(0).toUpperCase()+sug.slice(1)
+  if(!/[.!?]$/.test(sug)) sug+="."
+
+  sugBox.innerHTML="<div class='title'>Rewrite</div><div class='suggestion'>"+sug+"</div>"
+  sugBox.style.display="block"
+
+  // 🔽 TERJEMAHAN
+  translateToIndo(sug).then(m=>{
+    if(m){
+      meaningBox.innerHTML="<div class='title'>Meaning</div><div class='suggestion'>"+m+"</div>"
+      meaningBox.style.display="block"
+    }
+  })
+
 }else{
-sugBox.style.display="none"
+  sugBox.style.display="none"
+  meaningBox.style.display="none"
 }
 
+}
+async function translateToIndo(text){
+  try{
+    let r = await fetch(
+      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q="+encodeURIComponent(text)
+    )
+    let j = await r.json()
+    return j[0].map(x=>x[0]).join("")
+  }catch{
+    return ""
+  }
 }
 
 </script>
