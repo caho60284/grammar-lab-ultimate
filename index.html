@@ -13,74 +13,26 @@ margin:0;
 padding:20px;
 color:#1f2d2a;
 }
-
-h1{
-color:#2f6f5e;
-margin-bottom:4px;
-}
-
-.subtitle{
-color:#6b7c76;
-margin-bottom:18px;
-}
-
+h1{color:#2f6f5e;margin-bottom:4px;}
+.subtitle{color:#6b7c76;margin-bottom:18px;}
 textarea{
-width:100%;
-min-height:120px;
-border-radius:14px;
-border:1px solid #d7dfdb;
-padding:14px;
-font-size:18px;
-outline:none;
-box-sizing:border-box;
-background:white;
+width:100%;min-height:120px;border-radius:14px;
+border:1px solid #d7dfdb;padding:14px;font-size:18px;
+outline:none;box-sizing:border-box;background:white;
 }
-
 button{
-margin-top:14px;
-background:#2f6f5e;
-color:white;
-border:none;
-padding:12px 20px;
-border-radius:12px;
-font-size:16px;
-cursor:pointer;
+margin-top:14px;background:#2f6f5e;color:white;
+border:none;padding:12px 20px;border-radius:12px;
+font-size:16px;cursor:pointer;
 }
-
 .card{
-background:white;
-border-radius:16px;
-padding:16px;
-margin-top:16px;
-box-shadow:0 2px 6px rgba(0,0,0,0.05);
+background:white;border-radius:16px;padding:16px;
+margin-top:16px;box-shadow:0 2px 6px rgba(0,0,0,0.05);
 }
-
-.card h3{
-margin-top:0;
-color:#2f6f5e;
-}
-
-.ok{
-color:#2f8f5e;
-font-weight:600;
-}
-
-.warn{
-color:#d97706;
-font-weight:600;
-}
-
-.err{
-color:#c0392b;
-font-weight:600;
-}
-
-.box{
-background:#e6f2ee;
-padding:10px;
-border-radius:10px;
-font-style:italic;
-}
+.card h3{margin-top:0;color:#2f6f5e;}
+.ok{color:#2f8f5e;font-weight:600;}
+.warn{color:#d97706;font-weight:600;}
+.box{background:#e6f2ee;padding:10px;border-radius:10px;font-style:italic;}
 </style>
 </head>
 
@@ -115,7 +67,7 @@ analyze()
 })
 
 // =======================
-// AI-LIKE HEURISTIC ENGINE
+// HEURISTIC REWRITE ENGINE
 // =======================
 function heuristicRewrite(s){
 
@@ -136,14 +88,11 @@ out = out.replace(/\bvery\s+(\w+)\b/i,"really $1")
 // I am → I'm
 out = out.replace(/\bI am\b/,"I'm")
 
-// do not → don't
-out = out.replace(/\bdo not\b/,"don't")
-
 return out
 }
 
 // =======================
-// NATURAL SCORE
+// ISSUE DETECTOR
 // =======================
 function detectIssues(original,rewritten){
 
@@ -152,7 +101,7 @@ let issues=[]
 if(original!==rewritten){
 
 if(/\bvery\s+\w+\b/i.test(original))
-issues.push("Less natural intensifier: use really")
+issues.push("Less natural intensifier → use really")
 
 if(/\bfeel\s+\w+ing\b/i.test(original))
 issues.push("Use feel like + -ing")
@@ -172,33 +121,60 @@ return issues
 // =======================
 function syntaxDetect(s){
 let w = s.split(" ")
-return {
-subject:w[0]||"",
-verb:w[1]||""
-}
+return {subject:w[0]||"",verb:w[1]||""}
 }
 
 // =======================
-// MEANING HEURISTIC
+// SCALABLE MEANING ENGINE
 // =======================
 function meaningGuess(s){
 
-// I'm hungry / thirsty / tired etc
-if(/\bI'm really (\w+)\b/i.test(s)){
-let adj = s.match(/\bI'm really (\w+)\b/i)[1]
-return "Aku sangat "+adj
+// small core lexicon
+const coreAdj = {
+hungry:"lapar",
+thirsty:"haus",
+sleepy:"mengantuk",
+tired:"lelah",
+angry:"marah",
+sad:"sedih",
+happy:"bahagia",
+bored:"bosan",
+scared:"takut",
+excited:"bersemangat"
 }
 
-// feel like crying
-if(/feel like crying/i.test(s))
-return "Aku merasa ingin menangis"
+// I'm really + adj
+let m = s.match(/\bI'm really (\w+)\b/i)
+if(m){
+let adj = m[1].toLowerCase()
 
-// need to eat
-if(/need to eat/i.test(s))
-return "Aku perlu makan"
+// known adjective
+if(coreAdj[adj]) return "Aku sangat " + coreAdj[adj]
+
+// suffix heuristic
+if(adj.endsWith("ed")) return "Aku merasa " + adj
+if(adj.endsWith("ing")) return "Aku sedang " + adj
+if(adj.endsWith("ous")) return "Aku bersifat " + adj
+if(adj.endsWith("ful")) return "Aku penuh " + adj
 
 // fallback
-return "Makna umum: "+s
+return "Aku sangat merasa " + adj
+}
+
+// feel like + ing
+let f = s.match(/feel like (\w+)ing/i)
+if(f){
+return "Aku merasa ingin " + f[1] + "ing"
+}
+
+// need to + verb
+let n = s.match(/need to (\w+)/i)
+if(n){
+return "Aku perlu " + n[1]
+}
+
+// generic fallback
+return "Makna umum: " + s
 }
 
 // =======================
@@ -214,33 +190,28 @@ let issues = detectIssues(text,rewritten)
 let syn = syntaxDetect(text)
 let meaning = meaningGuess(rewritten)
 
-// show
 syntaxBox.style.display="block"
 issuesBox.style.display="block"
 rewriteBox.style.display="block"
 meaningBox.style.display="block"
 
-// syntax
 syntaxBox.innerHTML = `
 <h3>Syntax</h3>
 Subject: ${syn.subject}<br>
 Main verb: ${syn.verb}
 `
 
-// issues
 if(issues.length){
 issuesBox.innerHTML = `<h3>Issues</h3><div class="warn">⚠ ${issues.join("<br>⚠ ")}</div>`
 }else{
 issuesBox.innerHTML = `<h3>Issues</h3><div class="ok">✔ Natural & correct</div>`
 }
 
-// rewrite
 rewriteBox.innerHTML = `
 <h3>Rewrite</h3>
 <div class="box">${rewritten}</div>
 `
 
-// meaning
 meaningBox.innerHTML = `
 <h3>Meaning</h3>
 <div class="box">${meaning}</div>
