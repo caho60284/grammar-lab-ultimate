@@ -7,125 +7,208 @@
 
 <style>
 body{
-font-family:system-ui;
-background:#f4f7f6;
-padding:18px;
-color:#1f3d35;
+font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+background:#f4f6f5;
+margin:0;
+padding:20px;
+color:#1f2d2a;
 }
-h1{margin-bottom:6px}
-.subtitle{color:#6b7f78;margin-bottom:18px}
+
+h1{
+font-size:28px;
+margin-bottom:6px;
+color:#2f5d50;
+}
+
+.subtitle{
+color:#6c7f78;
+margin-bottom:20px;
+}
+
 textarea{
 width:100%;
+padding:16px;
 border-radius:14px;
-border:1px solid #ccd7d3;
-padding:14px;
+border:1px solid #cfd8d3;
 font-size:18px;
-min-height:110px;
+resize:none;
+min-height:90px;
+box-sizing:border-box;
 }
+
 button{
 width:100%;
 margin-top:14px;
 padding:16px;
 border:none;
 border-radius:14px;
-background:#3f6f60;
+background:#3f6f5f;
 color:white;
 font-size:18px;
 }
+
 .card{
 background:white;
-border-radius:14px;
+border-radius:16px;
 padding:14px;
-margin-top:14px;
-box-shadow:0 2px 6px rgba(0,0,0,0.06);
+margin-top:18px;
+box-shadow:0 4px 10px rgba(0,0,0,0.05);
+overflow-x:auto;
 }
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #e6eeea}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:15px;
+}
+
+th{
+background:#e6ece9;
+padding:10px;
+text-align:left;
+color:#355e52;
+}
+
+td{
+padding:10px;
+border-top:1px solid #eef2f0;
+}
+
+.meaning{
+background:#e8f0ec;
+padding:12px;
+border-radius:10px;
+margin-top:8px;
+}
 </style>
 </head>
+
 <body>
 
 <h1>🧠 English Grammar Analyzer</h1>
-<div class="subtitle">Analisis struktur kalimat Inggris</div>
+<div class="subtitle">Analisis struktur + phrase + arti otomatis</div>
 
-<textarea id="input">I go to school</textarea>
+<textarea id="input" placeholder="Ketik kalimat..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
 <div id="result"></div>
 
 <script>
-const verbs=["am","is","are","was","were","be","been","being",
-"go","goes","went","gone",
-"make","makes","made",
-"take","takes","took","taken",
-"eat","eats","ate","eaten",
-"see","saw","seen",
-"come","came","coming",
-"do","does","did","done",
-"have","has","had"]
 
-const prepositions=["to","in","on","at","with","from","into","onto","over","under","of","for","about"]
+const prepositions = [
+"to","in","on","at","from","with","about","for","of","by","into","onto","over","under"
+];
+
+const pronouns = [
+"i","you","he","she","it","we","they","me","him","her","us","them"
+];
+
+const beVerbs = ["am","is","are","was","were"];
+
+const verbs = [
+"go","make","take","come","see","know","get","give","find","think","tell","be"
+];
 
 function analyze(){
-const text=document.getElementById("input").value.trim()
-if(!text)return
 
-const words=text.split(/\s+/)
+const text = document.getElementById("input").value.trim();
+if(!text) return;
 
-let rows=[]
+const words = text.split(/\s+/);
+let rows = [];
+let meaning = "";
 
-words.forEach((w,i)=>{
-let role="Kata"
-let type="Tidak diketahui"
-let exp=""
+for(let i=0;i<words.length;i++){
 
-if(i===0){
-role="Subjek"
-type="Kata ganti / noun"
-exp="Pelaku utama kalimat"
-}
-else if(verbs.includes(w.toLowerCase())){
-role="Predikat"
-type="Verb"
-exp="Kata kerja utama"
-}
-else if(prepositions.includes(w.toLowerCase())){
-role="Preposisi"
-type="Preposition"
-exp="Kata depan relasi"
-}
-else{
-role="Pelengkap"
-type="Object / modifier"
-exp="Informasi tambahan"
+let w = words[i].toLowerCase();
+
+if(pronouns.includes(w)){
+rows.push([words[i],"Subjek","Kata ganti","Pelaku utama kalimat"]);
+continue;
 }
 
-rows.push({w,role,type,exp})
-})
-
-render(rows,text)
+if(beVerbs.includes(w)){
+rows.push([words[i],"Kata kerja","Be verb","Penghubung subjek dan sifat"]);
+continue;
 }
 
-function render(rows,text){
-let html=`<div class="card">
+if(verbs.includes(w)){
+rows.push([words[i],"Predikat","Verb","Tindakan utama"]);
+continue;
+}
+
+if(prepositions.includes(w)){
+let next = words[i+1] || "";
+rows.push([w+" "+next,"Prepositional phrase","Frasa preposisi","Keterangan relasi"]);
+rows.push([next,"Objek preposisi","Noun","Objek dari preposisi"]);
+i++;
+continue;
+}
+
+if(w.endsWith("ing")){
+rows.push([words[i],"Gerund / Verb-ing","Kata kerja bentuk -ing","Bisa jadi subjek atau objek"]);
+continue;
+}
+
+rows.push([words[i],"Kata","Umum","Perlu konteks"]);
+}
+
+meaning = translateSimple(words);
+
+render(rows,meaning);
+}
+
+function translateSimple(words){
+
+const dict={
+i:"aku",
+go:"pergi",
+to:"ke",
+school:"sekolah",
+church:"gereja",
+you:"kamu",
+make:"membuat",
+it:"itu",
+take:"mengambil",
+coat:"mantel"
+};
+
+return words.map(w=>dict[w.toLowerCase()]||w).join(" ");
+}
+
+function render(rows,meaning){
+
+let html = `
+<div class="card">
 <table>
-<tr><th>Bagian</th><th>Peran</th><th>Jenis</th><th>Penjelasan</th></tr>`
+<tr>
+<th>Bagian</th>
+<th>Peran</th>
+<th>Jenis</th>
+<th>Penjelasan</th>
+</tr>
+`;
 
 rows.forEach(r=>{
 html+=`<tr>
-<td>${r.w}</td>
-<td>${r.role}</td>
-<td>${r.type}</td>
-<td>${r.exp}</td>
-</tr>`
-})
+<td>${r[0]}</td>
+<td>${r[1]}</td>
+<td>${r[2]}</td>
+<td>${r[3]}</td>
+</tr>`;
+});
 
-html+=`</table></div>`
+html+=`</table></div>
 
-html+=`<div class="card"><b>Meaning:</b> (terjemahan sederhana)</div>`
+<div class="card">
+<b>Meaning:</b>
+<div class="meaning">${meaning}</div>
+</div>
+`;
 
-document.getElementById("result").innerHTML=html
+document.getElementById("result").innerHTML=html;
 }
+
 </script>
 
 </body>
