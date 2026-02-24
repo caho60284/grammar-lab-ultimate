@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,53 +7,41 @@
 
 <style>
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-background:#f4f6f5;
-padding:20px;
-color:#1f2d2a;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  background:#f4f6f5;
+  margin:0;
+  padding:20px;
 }
 
-h1{color:#2f5d50;margin-bottom:4px}
-.sub{color:#6c7f78;margin-bottom:18px}
+h1{
+  color:#234;
+}
 
 textarea{
-width:100%;
-padding:14px;
-border-radius:12px;
-border:1px solid #cfd8d3;
-font-size:18px;
-min-height:80px;
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid #ccc;
+  font-size:18px;
 }
 
 button{
-width:100%;
-margin-top:12px;
-padding:14px;
-border:none;
-border-radius:12px;
-background:#3f6f5f;
-color:white;
-font-size:18px;
+  margin-top:14px;
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#456b5d;
+  color:#fff;
+  font-size:18px;
 }
 
-.card{
-background:white;
-margin-top:18px;
-border-radius:14px;
-padding:14px;
-box-shadow:0 4px 8px rgba(0,0,0,0.05);
-overflow-x:auto;
-}
-
-table{width:100%;border-collapse:collapse}
-th{background:#e6ece9;padding:8px;text-align:left}
-td{padding:8px;border-top:1px solid #eef2f0}
-
-.meaning{
-background:#e8f0ec;
-padding:10px;
-border-radius:10px;
-margin-top:8px;
+.result{
+  margin-top:20px;
+  background:#fff;
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
 }
 </style>
 </head>
@@ -61,112 +49,50 @@ margin-top:8px;
 <body>
 
 <h1>🧠 English Grammar Analyzer</h1>
-<div class="sub">Analisis struktur + phrase + noun phrase</div>
 
-<textarea id="input" placeholder="Ketik kalimat..."></textarea>
+<textarea id="inputSentence" placeholder="Type sentence..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
-<div id="out"></div>
+<div id="result" class="result"></div>
 
 <script>
 
-const pronouns=["i","you","he","she","it","we","they"];
-const verbs=["go","make","take","come","see","know","find","give"];
-const preps=["to","in","on","at","from","with","into","onto","over","under","for","of"];
-const determiners=["the","a","an","my","your","his","her","our","their"];
+function normalizeSentence(t){
+  t=t.trim();
+
+  if(t.startsWith("n’t ")) t="I could"+t;
+  if(t.startsWith("’t ")) t="I could"+t;
+
+  if(!/^[A-Z]/.test(t))
+    t=t.charAt(0).toUpperCase()+t.slice(1);
+
+  return t;
+}
+
+async function translateNatural(text){
+  try{
+    const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q="
+      +encodeURIComponent(text);
+
+    const res=await fetch(url);
+    const data=await res.json();
+
+    return data[0].map(x=>x[0]).join("");
+  }catch(e){
+    return "";
+  }
+}
 
 function analyze(){
+  const input=document.getElementById("inputSentence").value;
+  const fixed=normalizeSentence(input);
 
-let text=document.getElementById("input").value.trim();
-if(!text)return;
+  const resultBox=document.getElementById("result");
 
-let words=text.split(/\s+/);
-let rows=[];
-
-for(let i=0;i<words.length;i++){
-
-let w=words[i].toLowerCase();
-let next=words[i+1]?.toLowerCase();
-let next2=words[i+2]?.toLowerCase();
-
-if(pronouns.includes(w)){
-rows.push([words[i],"Subjek","Kata ganti","Pelaku utama"]);
-continue;
-}
-
-if(verbs.includes(w)){
-rows.push([words[i],"Predikat","Verb","Tindakan"]);
-continue;
-}
-
-if(preps.includes(w)){
-
-// cek noun phrase setelah preposisi
-if(determiners.includes(next) && next2){
-let phrase=words[i]+" "+words[i+1]+" "+words[i+2];
-let np=words[i+1]+" "+words[i+2];
-
-rows.push([phrase,"Prepositional phrase","Frasa preposisi","Keterangan tempat/arah"]);
-rows.push([np,"Objek preposisi","Noun phrase","Objek dari preposisi"]);
-i+=2;
-continue;
-}
-
-// cek noun tunggal
-if(next){
-rows.push([words[i]+" "+words[i+1],"Prepositional phrase","Frasa preposisi","Keterangan"]);
-rows.push([words[i+1],"Objek preposisi","Noun","Objek"]);
-i++;
-continue;
-}
-
-}
-
-if(determiners.includes(w) && next){
-rows.push([words[i]+" "+words[i+1],"Noun phrase","Frasa benda","Benda spesifik"]);
-i++;
-continue;
-}
-
-rows.push([words[i],"Kata","Umum",""]);
-}
-
-render(rows,translate(words));
-}
-
-function translate(words){
-
-const dict={
-i:"aku",
-go:"pergi",
-to:"ke",
-the:"",
-police:"polisi",
-station:"kantor",
-school:"sekolah",
-church:"gereja"
-};
-
-return words.map(w=>dict[w.toLowerCase()]??w).join(" ").replace(/\s+/g," ");
-}
-
-function render(rows,meaning){
-
-let html=`<div class="card"><table>
-<tr><th>Bagian</th><th>Peran</th><th>Jenis</th><th>Penjelasan</th></tr>`;
-
-rows.forEach(r=>{
-html+=`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
-});
-
-html+=`</table></div>
-
-<div class="card">
-<b>Meaning:</b>
-<div class="meaning">${meaning}</div>
-</div>`;
-
-document.getElementById("out").innerHTML=html;
+  translateNatural(fixed).then(tr=>{
+    resultBox.innerHTML=
+      "<b>"+fixed+"</b><br><br>Arti: "+tr;
+  });
 }
 
 </script>
