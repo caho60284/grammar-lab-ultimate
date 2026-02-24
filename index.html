@@ -8,70 +8,64 @@
 <style>
 body{
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-background:#f2f5f3;
+background:#f4f6f5;
 margin:0;
-padding:24px 14px;
-display:flex;
-justify-content:center;
+padding:24px;
+color:#1f2d2a;
 }
 
 .container{
-width:100%;
-max-width:680px;
+max-width:720px;
+margin:auto;
 }
 
 h1{
-color:#3f5f53;
+font-size:40px;
 margin-bottom:6px;
-padding:0 6px;
+color:#3e5f53;
 }
 
-.sub{
-color:#7c8f86;
-margin-bottom:22px;
-padding:0 6px;
+.subtitle{
+color:#7b8e87;
+margin-bottom:24px;
+font-size:18px;
 }
 
 textarea{
 width:100%;
 padding:18px;
-border-radius:18px;
-border:2px solid #cfd8d3;
 font-size:18px;
+border-radius:18px;
+border:2px solid #cfd8d5;
 resize:none;
-box-sizing:border-box;
+outline:none;
 }
 
 button{
 width:100%;
 margin-top:18px;
 padding:18px;
+font-size:20px;
 border:none;
 border-radius:30px;
-background:#5d776c;
+background:#5d786e;
 color:white;
-font-size:19px;
+cursor:pointer;
 }
 
 .card{
-margin-top:24px;
 background:white;
 border-radius:22px;
 padding:22px;
-box-shadow:0 6px 18px rgba(0,0,0,0.08);
+margin-top:26px;
+box-shadow:0 6px 20px rgba(0,0,0,.05);
 }
 
-.arti{
-margin-top:12px;
-font-size:18px;
-}
-
-.box{
+.analysis{
 background:#eef1ef;
 border-radius:16px;
 padding:16px;
-margin-top:16px;
-line-height:1.6;
+margin-top:14px;
 }
 
 .label{
@@ -79,22 +73,10 @@ font-weight:600;
 }
 
 .stars{
-color:#e2b400;
+color:#f5c518;
 font-size:22px;
-margin-top:12px;
-}
-
-.native{
 margin-top:10px;
 }
-
-/* warna */
-.subj{color:#4f7cff;font-weight:600}
-.copula{color:#e74c3c;font-weight:600}
-.modal{color:#e67e22;font-weight:600}
-.adj{color:#2ecc71;font-weight:600}
-.obj{color:#2ecc71;font-weight:600}
-.clause{color:#8e44ad;font-weight:600}
 </style>
 </head>
 
@@ -102,120 +84,131 @@ margin-top:10px;
 <div class="container">
 
 <h1>🧠 Grammar Lab Ultimate</h1>
-<div class="sub">Struktur + POS + tense + naturalness + AI</div>
+<div class="subtitle">Structure + POS + tense + naturalness + AI</div>
 
 <textarea id="input" rows="3" placeholder="Type sentence..."></textarea>
 <button onclick="analyze()">Analyze</button>
 
-<div id="result" class="card" style="display:none"></div>
+<div id="result" class="card" style="display:none">
+<div id="sentence"></div>
+<div id="meaning" style="margin-top:10px"></div>
+
+<div class="analysis" id="analysisBox"></div>
+
+<div class="stars" id="stars"></div>
+
+<div id="native" style="margin-top:12px"></div>
+</div>
 
 </div>
 
 <script>
+
 async function translate(text){
 try{
 let r=await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q="+encodeURIComponent(text))
 let j=await r.json()
-return j[0].map(x=>x[0]).join("")
+return j[0]?.map(x=>x[0]).join("")||""
 }catch{return ""}
 }
 
-function splitClause(s){
-let m=s.match(/\b(because|that|who|which|when|if|you|she|he|they)\b/i)
-if(m){
-let idx=s.toLowerCase().indexOf(m[0].toLowerCase())
-return{
-main:s.slice(0,idx).trim(),
-sub:s.slice(idx).trim()
+function detectClause(words){
+let markers=["because","that","if","when","while","although","since","who","which"]
+for(let m of markers){
+let i=words.indexOf(m)
+if(i>0) return words.slice(i).join(" ")
 }
-}
-return{main:s,sub:""}
+return "-"
 }
 
-function parseMain(s){
-let w=s.split(" ")
-
-let subject=w[0]
-let copulas=["am","is","are","was","were","'m","'re","'s"]
-let modalList=["can","could","will","would","should","may","might","must"]
-
-let verb=""
-let modal=""
-let complement=""
-
-if(copulas.includes(w[1]?.toLowerCase())){
-verb=w[1]
-complement=w.slice(2).join(" ")
-return{type:"copula",subject,verb,complement}
+function detectModal(words){
+let modals=["can","could","will","would","shall","should","may","might","must"]
+for(let w of words){
+if(modals.includes(w)) return w
+}
+return "-"
 }
 
-if(modalList.includes(w[1]?.toLowerCase())){
-modal=w[1]
-verb=w[2]
-complement=w.slice(3).join(" ")
-return{type:"modal",subject,modal,verb,complement}
+function detectCopula(words){
+let cop=["am","is","are","was","were"]
+for(let w of words){
+if(cop.includes(w)) return w
+}
+return null
 }
 
-verb=w[1]
-complement=w.slice(2).join(" ")
-return{type:"verb",subject,verb,complement}
+function detectVerb(words){
+let mod=detectModal(words)
+if(mod!="-") return mod
+
+let cop=detectCopula(words)
+if(cop) return cop
+
+for(let w of words){
+if(w.endsWith("ed")||w.endsWith("ing")||w.endsWith("s")) return w
 }
 
-function highlight(main,sub){
+return "-"
+}
+
+function detectTense(words){
+if(words.includes("was")||words.includes("were")) return "past"
+if(words.includes("had")) return "past"
+if(words.includes("will")) return "future"
+if(words.includes("could")||words.includes("would")||words.includes("should")) return "modal past"
+return "present"
+}
+
+function detectObject(words,verbIndex){
+if(verbIndex<0||verbIndex>=words.length-1) return "-"
+return words.slice(verbIndex+1).join(" ")
+}
+
+function colorize(words){
 let html=""
-
-if(main.type==="copula"){
-html+=`<span class="subj">${main.subject}</span> `
-html+=`<span class="copula">${main.verb}</span> `
-html+=`<span class="adj">${main.complement}</span>`
-}
-
-if(main.type==="modal"){
-html+=`<span class="subj">${main.subject}</span> `
-html+=`<span class="modal">${main.modal}</span> `
-html+=`<span class="copula">${main.verb}</span> `
-html+=`<span class="obj">${main.complement}</span>`
-}
-
-if(main.type==="verb"){
-html+=`<span class="subj">${main.subject}</span> `
-html+=`<span class="copula">${main.verb}</span> `
-html+=`<span class="obj">${main.complement}</span>`
-}
-
-if(sub){
-html+=` <span class="clause">${sub}</span>`
-}
-
+words.forEach((w,i)=>{
+let color=["#5b8def","#e05d44","#5bbf8a","#8b6bd6","#f2a93b"][i%5]
+html+=`<span style="color:${color};font-weight:600">${w}</span> `
+})
 return html
 }
 
 async function analyze(){
 let text=document.getElementById("input").value.trim()
-if(!text)return
+if(!text) return
 
-let tr=await translate(text)
-let parts=splitClause(text)
-let main=parseMain(parts.main)
+let meaning=await translate(text)
 
-let html=`<div style="font-size:20px;margin-bottom:10px">${highlight(main,parts.sub)}</div>`
-html+=`<div class="arti"><b>Arti:</b> ${tr||"(terjemahan gagal)"}</div>`
+let words=text.toLowerCase().replace(/[.,!?]/g,"").split(/\s+/)
 
-html+=`<div class="box">
-<div><span class="label">Subject:</span> ${main.subject||"-"}</div>
-${main.modal?`<div><span class="label">Modal:</span> ${main.modal}</div>`:""}
-<div><span class="label">Verb:</span> ${main.verb||"-"}</div>
-<div><span class="label">Complement:</span> ${main.complement||"-"}</div>
-${parts.sub?`<div><span class="label">Clause:</span> ${parts.sub}</div>`:""}
-</div>`
+let subject=words[0]||"-"
+let modal=detectModal(words)
+let verb=detectVerb(words)
+let clause=detectClause(words)
+let tense=detectTense(words)
 
-html+=`<div class="stars">★★★★★</div>`
-html+=`<div class="native"><b>Native:</b> ${text}</div>`
+let verbIndex=words.indexOf(verb)
+let object=detectObject(words,verbIndex)
 
-document.getElementById("result").innerHTML=html
+let natural=5
+
 document.getElementById("result").style.display="block"
-}
-</script>
+document.getElementById("sentence").innerHTML=colorize(words)
+document.getElementById("meaning").innerHTML="<b>Arti:</b> "+(meaning||"(gagal)")
 
+document.getElementById("analysisBox").innerHTML=`
+<div><span class="label">Subject:</span> ${subject}</div>
+<div><span class="label">Modal:</span> ${modal}</div>
+<div><span class="label">Verb:</span> ${verb}</div>
+<div><span class="label">Object:</span> ${object}</div>
+<div><span class="label">Clause:</span> ${clause}</div>
+<div><span class="label">Tense:</span> ${tense}</div>
+`
+
+document.getElementById("stars").innerText="⭐".repeat(natural)
+document.getElementById("native").innerHTML="<b>Native:</b> "+text
+}
+
+</script>
 </body>
 </html>
