@@ -14,23 +14,9 @@ padding:20px;
 display:flex;
 justify-content:center;
 }
-
-.container{
-width:100%;
-max-width:700px;
-}
-
-h1{
-font-size:32px;
-margin:10px 0;
-color:#2f4f46;
-}
-
-.subtitle{
-color:#7b8f88;
-margin-bottom:20px;
-}
-
+.container{width:100%;max-width:700px;}
+h1{font-size:32px;margin:10px 0;color:#2f4f46;}
+.subtitle{color:#7b8f88;margin-bottom:20px;}
 textarea{
 width:100%;
 border-radius:16px;
@@ -40,7 +26,6 @@ font-size:18px;
 resize:none;
 box-sizing:border-box;
 }
-
 button{
 width:100%;
 margin-top:16px;
@@ -52,7 +37,6 @@ color:white;
 font-size:20px;
 cursor:pointer;
 }
-
 .card{
 background:white;
 border-radius:20px;
@@ -60,13 +44,11 @@ padding:20px;
 margin-top:20px;
 box-shadow:0 4px 12px rgba(0,0,0,0.05);
 }
-
 .highlight span.subject{color:#2a7de1;font-weight:600}
 .highlight span.modal{color:#e67e22;font-weight:600}
 .highlight span.verb{color:#e74c3c;font-weight:600}
 .highlight span.object{color:#27ae60;font-weight:600}
 .highlight span.clause{color:#8e44ad;font-weight:600}
-
 .block{
 background:#eef2ef;
 border-radius:14px;
@@ -74,17 +56,24 @@ padding:14px;
 margin-top:12px;
 line-height:1.5;
 }
-
-.stars{
-color:#f5b301;
-font-size:20px;
+.stars{color:#f5b301;font-size:20px;}
+.warn{
+background:#fff3cd;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
+}
+.correct{
+background:#e8f7ee;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
 }
 </style>
 </head>
 
 <body>
 <div class="container">
-
 <h1>🧠 English Grammar Analyzer</h1>
 <div class="subtitle">Struktur + phrase + POS + tense + naturalness + AI</div>
 
@@ -92,7 +81,6 @@ font-size:20px;
 <button onclick="analyze()">Analyze</button>
 
 <div id="result"></div>
-
 </div>
 
 <script>
@@ -113,10 +101,9 @@ return "-";
 function detectTense(words){
 for(let w of words){
 let base=w.replace("n't","");
-if(base==="could"||base==="would"||base==="should"||base==="might") return "modal past";
+if(["could","would","should","might"].includes(base)) return "modal past";
 }
 if(words.includes("will")) return "future";
-if(words.includes("am")||words.includes("is")||words.includes("are")) return "present";
 return "present";
 }
 
@@ -128,20 +115,35 @@ return words.find(w=>verbs.includes(w.replace("n't","")))||"-";
 function detectClause(sentence){
 let s=sentence.toLowerCase();
 if(s.includes("because")) return sentence.split(/because/i)[1].trim();
-if(s.includes("that")) return sentence.split(/that/i)[1].trim();
 return "-";
 }
 
 function highlight(sentence){
 let s=sentence;
-
 s=s.replace(/\b(I|you|he|she|they|we)\b/g,"<span class='subject'>$1</span>");
 s=s.replace(/\b(can|could|will|would|should|may|might|must|couldn't|wouldn't|shouldn't)\b/gi,"<span class='modal'>$1</span>");
 s=s.replace(/\b(make|go|take|do|come|be|have|get)\b/gi,"<span class='verb'>$1</span>");
 s=s.replace(/\bto .*?(?= because|$)/gi,"<span class='object'>$&</span>");
 s=s.replace(/\bbecause .*$/gi,"<span class='clause'>$&</span>");
-
 return s;
+}
+
+function detectRepeat(words){
+for(let i=0;i<words.length-1;i++){
+if(words[i]===words[i+1]){
+return words[i];
+}
+}
+return null;
+}
+
+function removeRepeat(words){
+let clean=[];
+for(let i=0;i<words.length;i++){
+if(i>0 && words[i]===words[i-1]) continue;
+clean.push(words[i]);
+}
+return clean.join(" ");
 }
 
 function naturalness(words){
@@ -155,11 +157,7 @@ try{
 let res=await fetch("https://libretranslate.de/translate",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-q:text,
-source:"en",
-target:"id"
-})
+body:JSON.stringify({q:text,source:"en",target:"id"})
 });
 let data=await res.json();
 if(data.translatedText) return data.translatedText;
@@ -169,28 +167,41 @@ return "Saya tidak bisa datang ke rumahmu karena saya sedang bertugas";
 
 async function analyze(){
 
-const text=document.getElementById("input").value.trim();
-if(!text) return;
+const raw=document.getElementById("input").value.trim();
+if(!raw) return;
 
-const words=text.split(/\s+/).map(normalize);
+const words=raw.split(/\s+/).map(normalize);
 
-const subject=text.split(" ")[0].toUpperCase();
+const repeat=detectRepeat(words);
+const corrected=repeat?removeRepeat(words):raw;
+
+const subject=raw.split(" ")[0].toUpperCase();
 const modal=detectModal(words);
 const verb=detectVerb(words);
-const clause=detectClause(text);
+const clause=detectClause(raw);
 const tense=detectTense(words);
 const nat=naturalness(words);
+const translation=await translate(corrected);
 
-const translation=await translate(text);
+let warnHTML="";
+let correctHTML="";
+
+if(repeat){
+warnHTML=`<div class="warn">Issue: repeated word "${repeat}"</div>`;
+correctHTML=`<div class="correct">Correction: ${corrected}</div>`;
+}
 
 document.getElementById("result").innerHTML=`
 <div class="card">
 
 <div class="highlight" style="font-size:22px;margin-bottom:12px">
-${highlight(text)}
+${highlight(corrected)}
 </div>
 
-<div style="margin-bottom:10px"><b>Arti:</b> ${translation}</div>
+${warnHTML}
+${correctHTML}
+
+<div style="margin-top:10px"><b>Arti:</b> ${translation}</div>
 
 <div class="block">
 <b>Subject:</b> ${subject}<br>
@@ -205,7 +216,7 @@ ${highlight(text)}
 </div>
 
 <div style="margin-top:10px">
-<b>Native:</b> ${text}
+<b>Native:</b> ${corrected}
 </div>
 
 </div>
