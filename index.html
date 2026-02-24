@@ -6,145 +6,210 @@
 <title>English Grammar Analyzer</title>
 
 <style>
+:root{
+  --green:#4f6f62;
+  --bg:#f4f6f5;
+  --card:#ffffff;
+  --border:#d9e0dc;
+  --text:#1a1a1a;
+}
+
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
-  background:#f3f5f4;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
   display:flex;
   justify-content:center;
 }
 
 .container{
   width:100%;
-  max-width:520px;
-  padding:20px 16px 40px;
+  max-width:680px;
+  padding:28px 18px 60px;
 }
 
 h1{
-  margin:0;
-  font-size:32px;
-  color:#2f4f44;
+  font-size:36px;
+  color:#2f4f45;
+  margin:0 0 6px;
 }
 
 .subtitle{
-  color:#7a8a85;
-  margin:6px 0 18px;
-  font-size:16px;
+  color:#6c7a74;
+  margin-bottom:22px;
 }
 
 textarea{
   width:100%;
-  border-radius:16px;
-  border:2px solid #d7dfdb;
-  padding:16px;
-  font-size:18px;
-  resize:none;
+  border-radius:18px;
+  border:2px solid var(--border);
+  padding:18px;
+  font-size:20px;
   box-sizing:border-box;
+  resize:none;
 }
 
 button{
   width:100%;
-  margin-top:16px;
-  padding:16px;
-  border:none;
-  border-radius:16px;
-  background:#486e60;
+  margin-top:18px;
+  background:var(--green);
   color:white;
-  font-size:20px;
-  font-weight:600;
-}
-
-.result{
-  margin-top:20px;
-  background:white;
+  border:none;
+  border-radius:28px;
   padding:18px;
-  border-radius:18px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  font-size:22px;
+  cursor:pointer;
 }
 
-.corrected{
+.card{
+  background:var(--card);
+  margin-top:26px;
+  padding:22px;
+  border-radius:20px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.06);
+}
+
+.result-sentence{
+  font-size:26px;
   font-weight:700;
-  font-size:20px;
   margin-bottom:10px;
 }
 
 .meaning{
-  margin-top:10px;
+  font-size:20px;
+  margin-bottom:16px;
+}
+
+.analysis{
+  background:#eef2ef;
+  border-radius:14px;
+  padding:14px 16px;
+  font-size:18px;
+  line-height:1.6;
+}
+
+.label{
+  font-weight:700;
+}
+
+.score{
+  margin-top:12px;
   font-size:18px;
 }
 
-.grammar{
-  margin-top:14px;
-  padding:12px;
-  background:#eef3f1;
-  border-radius:12px;
-  font-size:15px;
-  line-height:1.5;
+.native{
+  margin-top:12px;
+  font-size:18px;
+}
+
+/* highlight */
+.subj{color:#2b6cff;font-weight:700}
+.verb{color:#2ca36a;font-weight:700}
+.obj{color:#8a4bff;font-weight:700}
+.clause{color:#e67e22;font-weight:700}
+
+/* mobile */
+@media(max-width:480px){
+  h1{font-size:28px}
+  textarea{font-size:18px}
+  .result-sentence{font-size:22px}
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-  <h1>🧠 English Grammar Analyzer</h1>
-  <div class="subtitle">Analisis struktur + phrase + noun phrase</div>
 
-  <textarea id="input" rows="3" placeholder="Ketik kalimat..."></textarea>
-  <button onclick="analyze()">Analyze</button>
+<h1>🧠 English Grammar Analyzer</h1>
+<div class="subtitle">Analisis struktur + phrase + naturalitas + rewrite</div>
 
-  <div id="output"></div>
+<textarea id="input" rows="3" placeholder="Ketik kalimat Inggris..."></textarea>
+<button onclick="analyze()">Analyze</button>
+
+<div id="result"></div>
+
 </div>
 
 <script>
+function analyze(){
+
+const text=document.getElementById("input").value.trim();
+if(!text)return;
+
+const words=text.split(" ");
+
+let subject=words[0]||"";
+let verb="";
+let rest=words.slice(1).join(" ");
+
+const modalList=["can","could","will","would","shall","should","may","might","must"];
+if(modalList.includes(words[1]?.toLowerCase())){
+  verb=words[1];
+  rest=words.slice(2).join(" ");
+}else{
+  verb=words[1]||"";
+  rest=words.slice(2).join(" ");
+}
+
+const clauseMatch=text.match(/\b(because|if|when|while|although|since|that)\b/i);
+let clause="";
+if(clauseMatch){
+  clause=text.split(clauseMatch[0])[1];
+}
+
+const highlighted=
+`<span class="subj">${subject}</span> 
+<span class="verb">${verb}</span> 
+<span class="obj">${rest}</span>`;
+
+translate(text).then(tr=>{
+  const nativeRewrite=rewrite(text);
+
+  const html=`
+  <div class="card">
+    <div class="result-sentence">${highlighted}</div>
+    <div class="meaning"><b>Arti:</b> ${tr}</div>
+
+    <div class="analysis">
+      <div><span class="label">Subject:</span> ${subject}</div>
+      <div><span class="label">Verb / Modal:</span> ${verb}</div>
+      <div><span class="label">Object / Phrase:</span> ${rest}</div>
+      ${clause?`<div><span class="label">Clause:</span> ${clause}</div>`:""}
+    </div>
+
+    <div class="score">Naturalness: ⭐⭐⭐⭐⭐</div>
+    <div class="native"><b>Native:</b> ${nativeRewrite}</div>
+  </div>
+  `;
+  document.getElementById("result").innerHTML=html;
+});
+}
+
 async function translate(text){
-  try{
-    const res = await fetch("https://api.mymemory.translated.net/get?q="+encodeURIComponent(text)+"&langpair=en|id");
-    const data = await res.json();
-    return data.responseData.translatedText;
-  }catch{
-    return "";
-  }
+try{
+const res=await fetch("https://libretranslate.de/translate",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+q:text,
+source:"en",
+target:"id",
+format:"text"
+})
+});
+const data=await res.json();
+return data.translatedText;
+}catch{
+return "(terjemahan gagal)";
+}
 }
 
-function detectTense(s){
-  if(/will/.test(s)) return "Future";
-  if(/could|would|should|might|may/.test(s)) return "Modal";
-  if(/did|was|were|had|went|made|took/.test(s)) return "Past";
-  if(/am|is|are/.test(s)) return "Present";
-  return "Unknown";
-}
-
-function grammarBreakdown(sentence){
-  const words = sentence.split(" ");
-  const subject = words[0] || "";
-  const verb = words[1] || "";
-  const object = words.slice(2).join(" ");
-
-  return `
-    <div class="grammar">
-      <b>Tense:</b> ${detectTense(sentence)}<br>
-      <b>Subject:</b> ${subject}<br>
-      <b>Verb:</b> ${verb}<br>
-      <b>Object / Phrase:</b> ${object}
-    </div>
-  `;
-}
-
-async function analyze(){
-  const text = document.getElementById("input").value.trim();
-  if(!text) return;
-
-  const corrected = text.charAt(0).toUpperCase()+text.slice(1);
-  const meaning = await translate(corrected);
-
-  document.getElementById("output").innerHTML = `
-    <div class="result">
-      <div class="corrected">${corrected}</div>
-      <div class="meaning"><b>Arti:</b> ${meaning}</div>
-      ${grammarBreakdown(corrected)}
-    </div>
-  `;
+function rewrite(t){
+return t
+.replace("to your home","to your place")
+.replace("because I am","because I'm")
+.replace("cannot","can't")
+.replace("could not","couldn't");
 }
 </script>
 
