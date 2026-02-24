@@ -8,66 +8,69 @@
 <style>
 body{
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-background:#f4f6f5;
+background:#f2f5f3;
 margin:0;
-padding:24px;
+padding:24px 14px;
 display:flex;
 justify-content:center;
 }
 
 .container{
 width:100%;
-max-width:720px;
+max-width:680px;
 }
 
 h1{
 color:#3f5f53;
 margin-bottom:6px;
+padding:0 6px;
 }
 
 .sub{
 color:#7c8f86;
-margin-bottom:20px;
+margin-bottom:22px;
+padding:0 6px;
 }
 
 textarea{
 width:100%;
 padding:18px;
-border-radius:16px;
+border-radius:18px;
 border:2px solid #cfd8d3;
 font-size:18px;
 resize:none;
+box-sizing:border-box;
 }
 
 button{
 width:100%;
-margin-top:16px;
-padding:16px;
+margin-top:18px;
+padding:18px;
 border:none;
-border-radius:26px;
+border-radius:30px;
 background:#5d776c;
 color:white;
-font-size:18px;
+font-size:19px;
 }
 
 .card{
-margin-top:22px;
+margin-top:24px;
 background:white;
-border-radius:20px;
-padding:20px;
-box-shadow:0 4px 12px rgba(0,0,0,0.08);
+border-radius:22px;
+padding:22px;
+box-shadow:0 6px 18px rgba(0,0,0,0.08);
 }
 
 .arti{
-margin-top:10px;
+margin-top:12px;
 font-size:18px;
 }
 
 .box{
 background:#eef1ef;
-border-radius:14px;
-padding:14px;
-margin-top:14px;
+border-radius:16px;
+padding:16px;
+margin-top:16px;
 line-height:1.6;
 }
 
@@ -78,17 +81,18 @@ font-weight:600;
 .stars{
 color:#e2b400;
 font-size:22px;
-margin-top:10px;
+margin-top:12px;
 }
 
 .native{
 margin-top:10px;
 }
 
-/* warna grammar */
+/* warna */
 .subj{color:#4f7cff;font-weight:600}
+.copula{color:#e74c3c;font-weight:600}
 .modal{color:#e67e22;font-weight:600}
-.verb{color:#e74c3c;font-weight:600}
+.adj{color:#2ecc71;font-weight:600}
 .obj{color:#2ecc71;font-weight:600}
 .clause{color:#8e44ad;font-weight:600}
 </style>
@@ -117,35 +121,73 @@ return j[0].map(x=>x[0]).join("")
 }
 
 function splitClause(s){
-let words=s.split(" ")
-let idx=words.findIndex(w=>["because","that","who","which","when","if","you","she","he","they"].includes(w.toLowerCase()))
-if(idx>0){
+let m=s.match(/\b(because|that|who|which|when|if|you|she|he|they)\b/i)
+if(m){
+let idx=s.toLowerCase().indexOf(m[0].toLowerCase())
 return{
-main:words.slice(0,idx).join(" "),
-sub:words.slice(idx).join(" ")
+main:s.slice(0,idx).trim(),
+sub:s.slice(idx).trim()
 }
 }
 return{main:s,sub:""}
 }
 
-function parseSimple(s){
+function parseMain(s){
 let w=s.split(" ")
+
 let subject=w[0]
-let modal=["can","could","will","would","should","may","might","must"].includes(w[1]?.toLowerCase())?w[1]:""
-let verb=modal?w[2]:w[1]
-let rest=modal?w.slice(3):w.slice(2)
-return{
-subject,modal,verb,rest:rest.join(" ")
-}
+let copulas=["am","is","are","was","were","'m","'re","'s"]
+let modalList=["can","could","will","would","should","may","might","must"]
+
+let verb=""
+let modal=""
+let complement=""
+
+if(copulas.includes(w[1]?.toLowerCase())){
+verb=w[1]
+complement=w.slice(2).join(" ")
+return{type:"copula",subject,verb,complement}
 }
 
-function highlight(p){
-let out=[]
-if(p.subject)out.push(`<span class="subj">${p.subject}</span>`)
-if(p.modal)out.push(`<span class="modal">${p.modal}</span>`)
-if(p.verb)out.push(`<span class="verb">${p.verb}</span>`)
-if(p.rest)out.push(`<span class="obj">${p.rest}</span>`)
-return out.join(" ")
+if(modalList.includes(w[1]?.toLowerCase())){
+modal=w[1]
+verb=w[2]
+complement=w.slice(3).join(" ")
+return{type:"modal",subject,modal,verb,complement}
+}
+
+verb=w[1]
+complement=w.slice(2).join(" ")
+return{type:"verb",subject,verb,complement}
+}
+
+function highlight(main,sub){
+let html=""
+
+if(main.type==="copula"){
+html+=`<span class="subj">${main.subject}</span> `
+html+=`<span class="copula">${main.verb}</span> `
+html+=`<span class="adj">${main.complement}</span>`
+}
+
+if(main.type==="modal"){
+html+=`<span class="subj">${main.subject}</span> `
+html+=`<span class="modal">${main.modal}</span> `
+html+=`<span class="copula">${main.verb}</span> `
+html+=`<span class="obj">${main.complement}</span>`
+}
+
+if(main.type==="verb"){
+html+=`<span class="subj">${main.subject}</span> `
+html+=`<span class="copula">${main.verb}</span> `
+html+=`<span class="obj">${main.complement}</span>`
+}
+
+if(sub){
+html+=` <span class="clause">${sub}</span>`
+}
+
+return html
 }
 
 async function analyze(){
@@ -154,19 +196,17 @@ if(!text)return
 
 let tr=await translate(text)
 let parts=splitClause(text)
+let main=parseMain(parts.main)
 
-let main=parseSimple(parts.main)
-let sub=parts.sub?parseSimple(parts.sub):null
-
-let html=`<div style="font-size:20px;margin-bottom:8px">${highlight(main)} ${sub?`<span class="clause">${parts.sub}</span>`:""}</div>`
+let html=`<div style="font-size:20px;margin-bottom:10px">${highlight(main,parts.sub)}</div>`
 html+=`<div class="arti"><b>Arti:</b> ${tr||"(terjemahan gagal)"}</div>`
 
 html+=`<div class="box">
 <div><span class="label">Subject:</span> ${main.subject||"-"}</div>
-<div><span class="label">Modal:</span> ${main.modal||"-"}</div>
+${main.modal?`<div><span class="label">Modal:</span> ${main.modal}</div>`:""}
 <div><span class="label">Verb:</span> ${main.verb||"-"}</div>
-<div><span class="label">Object/Phrase:</span> ${main.rest||"-"}</div>
-${sub?`<div><span class="label">Clause:</span> ${parts.sub}</div>`:""}
+<div><span class="label">Complement:</span> ${main.complement||"-"}</div>
+${parts.sub?`<div><span class="label">Clause:</span> ${parts.sub}</div>`:""}
 </div>`
 
 html+=`<div class="stars">★★★★★</div>`
